@@ -18,8 +18,16 @@ export class GroupsService {
     return group;
   }
 
-  findAll() {
-    return this.repo.find();
+  async findAll() {
+    const groups = await this.repo.find({ order: { createdAt: "DESC" } });
+    const seen = new Set<string>();
+
+    return groups.filter((group) => {
+      const key = `${group.creatorUserId}:${group.name}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   findOne(id: string) {

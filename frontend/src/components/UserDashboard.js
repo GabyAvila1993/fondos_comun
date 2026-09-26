@@ -94,6 +94,8 @@ export default function UserDashboard() {
         return action(nonce, signature);
     }
     async function handleDeposit(fiatAmount) {
+        if (isSubmitting)
+            return;
         if (!activeGroup) {
             setError("Selecciona un grupo primero");
             return;
@@ -120,6 +122,8 @@ export default function UserDashboard() {
         }
     }
     async function handleSpend(amount, desc, forceApproval) {
+        if (isSubmitting)
+            return;
         if (!activeGroup) {
             setError("Selecciona un grupo primero");
             return;
@@ -150,6 +154,8 @@ export default function UserDashboard() {
         }
     }
     async function handleVote(txId, approve) {
+        if (isSubmitting)
+            return;
         if (!activeGroup) {
             setError("Selecciona un grupo primero");
             return;
@@ -171,6 +177,8 @@ export default function UserDashboard() {
         }
     }
     async function handleNewGroup(name, creditLimit) {
+        if (isSubmitting)
+            return;
         if (!name.trim()) {
             setError("El nombre del grupo es requerido");
             return;
