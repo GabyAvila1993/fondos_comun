@@ -5,6 +5,18 @@ import PendingApprovals from "./PendingApprovals";
 import Sheet from "./Sheet";
 import { DepositForm, SpendForm, NewGroupForm } from "./GroupForms";
 
+const MON_TO_FIAT_RATE = 0.001;
+
+const fmtFiatFromMon = (monAmount: number) => {
+  const fiatAmount = Number(monAmount) / MON_TO_FIAT_RATE;
+  return "$" + Math.round(fiatAmount).toLocaleString("es-AR");
+};
+
+const fmtMon = (monAmount: number) => {
+  const value = Number(monAmount);
+  return `${value.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 4 })} MON`;
+};
+
 const fmt = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 
 export type SheetType = "deposit" | "spend" | "request" | "newGroup" | null;
@@ -75,7 +87,9 @@ export default function GroupDetail({
       {/* Balance Hero Premium */}
       <div className="hero">
         <div className="label">FONDO DISPONIBLE</div>
-        <div className="amount">{fmt(Number(active.balance || 0))}</div>
+        <div className="amount">{fmtFiatFromMon(Number(active.balance || 0))}</div>
+        <div className="amount-conversion-line">{fmtMon(Number(active.balance || 0))}</div>
+        <div className="amount-exchange-rate">Tipo de cambio: 1 MON = $1.000</div>
         <div className="group-tabs">
           {groups.map((g) => (
             <div

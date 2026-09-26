@@ -255,7 +255,7 @@ button, input {
 
 .hero .amount {
   position: relative;
-  margin: 12px 0 18px;
+  margin: 12px 0 8px;
   font-size: 48px;
   font-weight: 800;
   letter-spacing: -0.04em;
@@ -267,6 +267,20 @@ button, input {
   animation: gradientShift 4s ease infinite;
   text-shadow: 0 0 30px rgba(0, 216, 192, 0.3);
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.amount-conversion-line {
+  margin-bottom: 4px;
+  color: var(--gold);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.amount-exchange-rate {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
 }
 
 @keyframes gradientShift {
@@ -1061,6 +1075,26 @@ button, input {
   margin-bottom: 12px;
 }
 
+.dash-amount-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.dash-amount-equivalent {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin-top: -8px;
+  padding-left: 2px;
+}
+
+.dash-amount-equivalent span {
+  color: var(--gold);
+  font-weight: 700;
+}
+
 .dash-input {
   width: 100%;
   padding: 16px 18px;
@@ -1070,7 +1104,7 @@ button, input {
   backdrop-filter: blur(16px);
   color: var(--text);
   font-size: 15px;
-  margin-bottom: 20px;
+  margin-bottom: 0;
   outline: none;
   transition: all 0.3s ease;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.01);

@@ -1,5 +1,21 @@
 import { useState } from "react";
 
+// Tasa demo usada en el backend para convertir pesos a USDC/MON.
+// Se mantiene explícita en el frontend para mostrar la equivalencia
+// sin que el valor principal del input se reescriba con el monto convertido.
+const FIAT_TO_MON_RATE = 0.001;
+
+const formatMonEquivalent = (fiatAmount: string) => {
+  const value = Number(fiatAmount);
+  if (!fiatAmount || !Number.isFinite(value) || value <= 0) return "";
+
+  const monAmount = value * FIAT_TO_MON_RATE;
+  return `${monAmount.toLocaleString("es-AR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 4,
+  })} MON`;
+};
+
 // Formularios centralizados para evitar duplicación de código
 // Estos formularios se importan tanto en UserDashboard como en GroupDetail
 
@@ -16,17 +32,26 @@ export function DepositForm({ onSubmit, error, isSubmitting }: { onSubmit: (amou
     onSubmit(Number(amount));
   };
 
+  const monEquivalent = formatMonEquivalent(amount);
+
   return (
     <>
       <h3 className="dash-form-title">Ingresar dinero</h3>
       <p className="hint">Transferí desde tu cuenta bancaria o Mercado Pago. Se acredita al instante en el fondo del grupo.</p>
-      <input
-        className={`dash-input ${localError || error ? 'dash-input-error' : ''}`}
-        type="number"
-        placeholder="Monto a ingresar"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-      />
+      <div className="dash-amount-input-wrap">
+        <input
+          className={`dash-input ${localError || error ? 'dash-input-error' : ''}`}
+          type="number"
+          placeholder="Monto a ingresar"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
+        {monEquivalent && (
+          <div className="dash-amount-equivalent">
+            Corresponde a <span>{monEquivalent}</span>
+          </div>
+        )}
+      </div>
       {(localError || error) && <div className="dash-field-error">{localError || error}</div>}
       <button className="btn btn-gold" onClick={handleSubmit} disabled={isSubmitting}>
         {isSubmitting ? "Procesando..." : "Confirmar ingreso"}
@@ -65,6 +90,8 @@ export function SpendForm({
     onSubmit(Number(amount), desc);
   };
 
+  const monEquivalent = formatMonEquivalent(amount);
+
   return (
     <>
       <h3 className="dash-form-title">{danger ? "Pedir un monto mayor" : "Registrar gasto"}</h3>
@@ -73,13 +100,20 @@ export function SpendForm({
           ? "Esto le llega como notificación a todo el grupo y necesita mayoría de votos."
           : `Hasta ${creditLimit === Infinity ? "" : "$" + creditLimit} sin aprobación.`}
       </p>
-      <input
-        className={`dash-input ${localError || error ? 'dash-input-error' : ''}`}
-        type="number"
-        placeholder="Monto"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-      />
+      <div className="dash-amount-input-wrap">
+        <input
+          className={`dash-input ${localError || error ? 'dash-input-error' : ''}`}
+          type="number"
+          placeholder="Monto"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
+        {monEquivalent && (
+          <div className="dash-amount-equivalent">
+            Corresponde a <span>{monEquivalent}</span>
+          </div>
+        )}
+      </div>
       <input
         className={`dash-input ${localError || error ? 'dash-input-error' : ''}`}
         type="text"

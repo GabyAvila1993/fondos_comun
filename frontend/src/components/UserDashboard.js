@@ -6,6 +6,11 @@ import { signTyped, toWei } from "../lib/eip712";
 import Sheet from "./Sheet";
 import GroupDetail from "./GroupDetail";
 import { DepositForm, SpendForm, NewGroupForm } from "./GroupForms";
+const MON_TO_FIAT_RATE = 0.001;
+const fmtFiatFromMon = (monAmount) => {
+    const fiatAmount = Number(monAmount) / MON_TO_FIAT_RATE;
+    return "$" + Math.round(fiatAmount).toLocaleString("es-AR");
+};
 export default function UserDashboard() {
     const { user, logout, getAccessToken } = usePrivy();
     const { wallets } = useWallets();
@@ -236,7 +241,7 @@ export default function UserDashboard() {
 // ---------------------------------------------------------------------
 function ResumenTab({ totalBalance, totalGroups, totalPending, }) {
     const fmt = (n) => "$" + Math.round(n).toLocaleString("es-AR");
-    return (_jsxs("div", { children: [_jsx("h2", { className: "dash-section-title", children: "Resumen general" }), _jsxs("div", { className: "dash-summary-row", children: [_jsxs("div", { className: "dash-summary-card", children: [_jsx("div", { className: "dash-summary-value", children: fmt(totalBalance) }), _jsx("div", { className: "dash-summary-label", children: "Fondo total (todos tus grupos)" })] }), _jsxs("div", { className: "dash-summary-card", children: [_jsx("div", { className: "dash-summary-value", children: totalGroups }), _jsx("div", { className: "dash-summary-label", children: "Grupos activos" })] }), _jsxs("div", { className: "dash-summary-card", children: [_jsx("div", { className: "dash-summary-value", children: totalPending }), _jsx("div", { className: "dash-summary-label", children: "Solicitudes esperando tu voto" })] })] })] }));
+    return (_jsxs("div", { children: [_jsx("h2", { className: "dash-section-title", children: "Resumen general" }), _jsxs("div", { className: "dash-summary-row", children: [_jsxs("div", { className: "dash-summary-card", children: [_jsx("div", { className: "dash-summary-value", children: fmtFiatFromMon(totalBalance) }), _jsx("div", { className: "dash-summary-label", children: "Fondo total (todos tus grupos)" })] }), _jsxs("div", { className: "dash-summary-card", children: [_jsx("div", { className: "dash-summary-value", children: totalGroups }), _jsx("div", { className: "dash-summary-label", children: "Grupos activos" })] }), _jsxs("div", { className: "dash-summary-card", children: [_jsx("div", { className: "dash-summary-value", children: totalPending }), _jsx("div", { className: "dash-summary-label", children: "Solicitudes esperando tu voto" })] })] })] }));
 }
 // ---------------------------------------------------------------------
 // Mis grupos: la lista completa, no solo el que tenés seleccionado.
@@ -246,7 +251,7 @@ function GruposTab({ groups, activeGroupId, onSelectGroup, onOpenNewGroupSheet, 
     if (groups.length === 0) {
         return (_jsxs("div", { className: "dash-empty-state-premium", children: [_jsx("div", { className: "dash-empty-icon", children: "\uD83D\uDC65" }), _jsx("h2", { className: "dash-section-title", children: "\u00A1Crea tu primer grupo!" }), _jsx("p", { className: "dash-hint", children: "Comienza a gestionar tus finanzas compartidas creando un grupo para viajes, comidas o gastos en com\u00FAn." }), _jsxs("button", { className: "btn btn-gold dash-cta-button", onClick: onOpenNewGroupSheet, children: [_jsx("span", { className: "dash-cta-icon", children: "\u2728" }), _jsx("span", { children: "Crear grupo ahora" })] })] }));
     }
-    return (_jsxs("div", { children: [_jsx("h2", { className: "dash-section-title", children: "Mis grupos" }), _jsx("div", { className: "dash-group-list", children: groups.map((g) => (_jsxs("div", { className: `dash-group-card ${g.id === activeGroupId ? "dash-group-card-active" : ""}`, onClick: () => onGroupDetail(g), children: [_jsxs("div", { className: "dash-group-card-main", children: [_jsx("div", { className: "dash-group-card-name", children: g.name }), _jsxs("div", { className: "dash-group-card-meta", children: ["L\u00EDmite por gasto: ", fmt(Number(g.creditLimit)), " \u00B7 ", g.dailyLimit, " por d\u00EDa"] })] }), _jsx("div", { className: "dash-group-card-balance", children: fmt(Number(g.balance || 0)) }), _jsx("div", { className: "dash-group-card-action", children: _jsx("span", { className: "dash-group-card-action-text", children: "Ver detalles \u2192" }) })] }, g.id))) })] }));
+    return (_jsxs("div", { children: [_jsx("h2", { className: "dash-section-title", children: "Mis grupos" }), _jsx("div", { className: "dash-group-list", children: groups.map((g) => (_jsxs("div", { className: `dash-group-card ${g.id === activeGroupId ? "dash-group-card-active" : ""}`, onClick: () => onGroupDetail(g), children: [_jsxs("div", { className: "dash-group-card-main", children: [_jsx("div", { className: "dash-group-card-name", children: g.name }), _jsxs("div", { className: "dash-group-card-meta", children: ["L\u00EDmite por gasto: ", fmt(Number(g.creditLimit)), " \u00B7 ", g.dailyLimit, " por d\u00EDa"] })] }), _jsx("div", { className: "dash-group-card-balance", children: fmtFiatFromMon(Number(g.balance || 0)) }), _jsx("div", { className: "dash-group-card-action", children: _jsx("span", { className: "dash-group-card-action-text", children: "Ver detalles \u2192" }) })] }, g.id))) })] }));
 }
 // ---------------------------------------------------------------------
 // Estadísticas: un grafico de barras simple hecho con SVG (no depende de
@@ -263,7 +268,7 @@ function EstadisticasTab({ stats, maxStat }) {
     return (_jsxs("div", { children: [_jsx("h2", { className: "dash-section-title", children: "En qu\u00E9 grupos pusiste m\u00E1s plata" }), _jsxs("svg", { className: "dash-chart", viewBox: `0 0 ${chartWidth} ${stats.length * (barHeight + gap)}`, width: "100%", children: [_jsx("defs", { children: _jsxs("linearGradient", { id: "chartGradient", x1: "0%", y1: "0%", x2: "100%", y2: "0%", children: [_jsx("stop", { offset: "0%", stopColor: "#00D8C0" }), _jsx("stop", { offset: "100%", stopColor: "#FFD700" })] }) }), stats.map((s, i) => {
                         const barWidth = (s.amountDeposited / maxStat) * (chartWidth - 120);
                         const y = i * (barHeight + gap);
-                        return (_jsxs("g", { children: [_jsx("text", { x: 0, y: y + barHeight / 2 + 4, className: "dash-chart-label", children: s.groupName }), _jsx("rect", { x: 120, y: y, width: Math.max(barWidth, 2), height: barHeight, rx: 6, className: "dash-chart-bar" }), _jsx("text", { x: 120 + barWidth + 8, y: y + barHeight / 2 + 4, className: "dash-chart-value", children: fmt(s.amountDeposited) })] }, s.groupName));
+                        return (_jsxs("g", { children: [_jsx("text", { x: 0, y: y + barHeight / 2 + 4, className: "dash-chart-label", children: s.groupName }), _jsx("rect", { x: 120, y: y, width: Math.max(barWidth, 2), height: barHeight, rx: 6, className: "dash-chart-bar" }), _jsx("text", { x: 120 + barWidth + 8, y: y + barHeight / 2 + 4, className: "dash-chart-value", children: fmtFiatFromMon(s.amountDeposited) })] }, s.groupName));
                     })] }), _jsx("p", { className: "dash-hint dash-chart-note", children: "Por ahora este n\u00FAmero muestra el fondo actual del grupo, no el total hist\u00F3rico que depositaste \u2014 falta un endpoint en el backend que sume tus dep\u00F3sitos reales (ver comentario en el c\u00F3digo)." })] }));
 }
 // ---------------------------------------------------------------------

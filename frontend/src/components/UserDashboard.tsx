@@ -31,6 +31,13 @@ interface GroupStat {
   amountDeposited: number;
 }
 
+const MON_TO_FIAT_RATE = 0.001;
+
+const fmtFiatFromMon = (monAmount: number) => {
+  const fiatAmount = Number(monAmount) / MON_TO_FIAT_RATE;
+  return "$" + Math.round(fiatAmount).toLocaleString("es-AR");
+};
+
 export default function UserDashboard() {
   const { user, logout, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
@@ -426,7 +433,7 @@ function ResumenTab({
       <h2 className="dash-section-title">Resumen general</h2>
       <div className="dash-summary-row">
         <div className="dash-summary-card">
-          <div className="dash-summary-value">{fmt(totalBalance)}</div>
+          <div className="dash-summary-value">{fmtFiatFromMon(totalBalance)}</div>
           <div className="dash-summary-label">Fondo total (todos tus grupos)</div>
         </div>
         <div className="dash-summary-card">
@@ -478,7 +485,7 @@ function GruposTab({ groups, activeGroupId, onSelectGroup, onOpenNewGroupSheet, 
                 Límite por gasto: {fmt(Number(g.creditLimit))} · {g.dailyLimit} por día
               </div>
             </div>
-            <div className="dash-group-card-balance">{fmt(Number(g.balance || 0))}</div>
+            <div className="dash-group-card-balance">{fmtFiatFromMon(Number(g.balance || 0))}</div>
             <div className="dash-group-card-action">
               <span className="dash-group-card-action-text">Ver detalles →</span>
             </div>
@@ -529,7 +536,7 @@ function EstadisticasTab({ stats, maxStat }: { stats: GroupStat[]; maxStat: numb
               </text>
               <rect x={120} y={y} width={Math.max(barWidth, 2)} height={barHeight} rx={6} className="dash-chart-bar" />
               <text x={120 + barWidth + 8} y={y + barHeight / 2 + 4} className="dash-chart-value">
-                {fmt(s.amountDeposited)}
+                {fmtFiatFromMon(s.amountDeposited)}
               </text>
             </g>
           );
