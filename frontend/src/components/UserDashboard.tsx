@@ -278,6 +278,7 @@ export default function UserDashboard() {
       <div
         className={`dash-nav-item ${activeTab === tab ? "dash-nav-item-active" : ""}`}
         onClick={() => {
+          setCurrentView("dashboard");
           setActiveTab(tab);
           setSidebarOpen(false); // en mobile, al elegir una sección se cierra el panel
         }}

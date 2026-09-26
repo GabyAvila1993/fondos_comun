@@ -230,6 +230,7 @@ export default function UserDashboard() {
     }
     function NavItem({ tab, label, icon }) {
         return (_jsxs("div", { className: `dash-nav-item ${activeTab === tab ? "dash-nav-item-active" : ""}`, onClick: () => {
+                setCurrentView("dashboard");
                 setActiveTab(tab);
                 setSidebarOpen(false); // en mobile, al elegir una sección se cierra el panel
             }, children: [_jsx("span", { className: "dash-nav-icon", children: icon }), _jsx("span", { className: "dash-nav-label", children: label })] }));
