@@ -1,0 +1,21 @@
+[
+  "function name() view returns (string)",
+  "function creditLimit() view returns (uint256)",
+  "function dailyLimit() view returns (uint256)",
+  "function majorityNeeded() view returns (uint256)",
+  "function nonces(address) view returns (uint256)",
+  "function members(address) view returns (bool active, bool isGuest)",
+  "function transactionCount() view returns (uint256)",
+  "function balance() view returns (uint256)",
+  "function getTransaction(uint256) view returns (address proposer, uint256 amount, string description, bool executed, bool rejected, uint256 votesFor, uint256 votesAgainst, uint256 createdAt)",
+  "function deposit(uint256 amount)",
+  "function joinFor(address user, uint256 nonce, bytes signature)",
+  "function requestExpenseFor(address user, uint256 amount, string desc, bool forceApproval, uint256 nonce, bytes signature) returns (uint256)",
+  "function voteFor(address voter, uint256 id, bool approve, uint256 nonce, bytes signature)",
+  "event Deposit(address indexed from, uint256 amount, uint256 newBalance)",
+  "event ExpenseExecuted(uint256 indexed txId, address indexed user, uint256 amount, string desc, uint256 newBalance)",
+  "event ApprovalRequested(uint256 indexed txId, address indexed user, uint256 amount, string desc, uint256 votesNeeded)",
+  "event Voted(uint256 indexed txId, address indexed voter, bool approve, uint256 votesFor, uint256 votesAgainst)",
+  "event ApprovalResolved(uint256 indexed txId, bool approved)",
+  "event MemberAdded(address indexed member, bool isGuest)"
+]

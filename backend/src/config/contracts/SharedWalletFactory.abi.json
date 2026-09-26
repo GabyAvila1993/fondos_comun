@@ -1,0 +1,5 @@
+[
+  "function createWallet(string groupName, address[] members, uint256 creditLimit, uint256 dailyLimit) returns (address)",
+  "function getWalletsByOwner(address owner) view returns (address[])",
+  "event WalletCreated(address indexed wallet, address indexed owner, string name)"
+]
