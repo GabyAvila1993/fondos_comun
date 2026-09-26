@@ -141,11 +141,12 @@ export default function UserDashboard() {
             setError("La descripción es requerida");
             return;
         }
+        const amountMon = amount / 1000;
         setIsSubmitting(true);
         setError("");
         try {
             const token = await getAccessToken();
-            await withSignature("RequestExpense", { user: embeddedWallet.address, amount: toWei(amount.toString()), desc, forceApproval }, (nonce, signature) => api.requestExpense(token, activeGroup.id, { amountMon: amount.toString(), desc, forceApproval, nonce, signature }));
+            await withSignature("RequestExpense", { user: embeddedWallet.address, amount: toWei(amountMon.toString()), desc, forceApproval }, (nonce, signature) => api.requestExpense(token, activeGroup.id, { amountMon: amountMon.toString(), desc, forceApproval, nonce, signature }));
             setSheet(null);
             setSuccessMessage(forceApproval ? "¡Solicitud enviada!" : "¡Gasto registrado!");
             setTimeout(() => setSuccessMessage(""), 3000);

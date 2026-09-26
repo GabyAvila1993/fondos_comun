@@ -1,15 +1,16 @@
 import { useState } from "react";
 
-// Tasa demo usada en el backend para convertir pesos a USDC/MON.
-// Se mantiene explícita en el frontend para mostrar la equivalencia
-// sin que el valor principal del input se reescriba con el monto convertido.
-const FIAT_TO_MON_RATE = 0.001;
+// Conversión del usuario: pesos -> MON.
+// Ejemplo: 2000 pesos = 2 MON.
+const FIAT_TO_MON_RATE = 1000;
+
+const fiatToMon = (fiatAmount: number) => Number(fiatAmount) / FIAT_TO_MON_RATE;
 
 const formatMonEquivalent = (fiatAmount: string) => {
   const value = Number(fiatAmount);
   if (!fiatAmount || !Number.isFinite(value) || value <= 0) return "";
 
-  const monAmount = value * FIAT_TO_MON_RATE;
+  const monAmount = fiatToMon(value);
   return `${monAmount.toLocaleString("es-AR", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 4,
