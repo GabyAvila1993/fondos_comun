@@ -12,10 +12,6 @@ const fmtFiatFromMon = (monAmount: number) => {
   return "$" + Math.round(fiatAmount).toLocaleString("es-AR");
 };
 
-const fmtMon = (monAmount: number) => {
-  const value = Number(monAmount);
-  return `${value.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 4 })} MON`;
-};
 
 const fmt = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 
@@ -80,7 +76,7 @@ export default function GroupDetail({
       {/* User Greeting */}
       <div className="group-detail-greeting">
         <div className="greet">
-          Hola, <strong>{user?.google?.name || user?.email?.address || "vos"}</strong>
+          Bienvenido, <strong>{user?.google?.name || user?.email?.address || "Usuario"}</strong>
         </div>
       </div>
 
@@ -88,8 +84,6 @@ export default function GroupDetail({
       <div className="hero">
         <div className="label">FONDO DISPONIBLE</div>
         <div className="amount">{fmtFiatFromMon(Number(active.balance || 0))}</div>
-        <div className="amount-conversion-line">{fmtMon(Number(active.balance || 0))}</div>
-        <div className="amount-exchange-rate">Tipo de cambio: 1 MON = $1.000</div>
         <div className="group-tabs">
           {groups.map((g) => (
             <div
@@ -109,7 +103,7 @@ export default function GroupDetail({
           <div className="circle">＋</div><span className="lbl">Ingresar</span>
         </div>
         <div className="action" onClick={() => setSheet("spend")}>
-          <div className="circle">🛒</div><span className="lbl">Gastar</span>
+          <div className="circle">💸</div><span className="lbl">Retirar</span>
         </div>
         <div className="action" onClick={() => setSheet("request")}>
           <div className="circle">⚡</div><span className="lbl">Pedir más</span>
@@ -119,10 +113,8 @@ export default function GroupDetail({
         </div>
       </div>
 
-      {/* Quota Strip Premium */}
+      {/* Quota Strip Premium Removed */}
       <div className="quota-strip">
-        <div className="quota-mini"><div className="v">{fmt(Number(active.creditLimit))}</div><div className="l">MÁX. POR GASTO</div></div>
-        <div className="quota-mini"><div className="v">{todayCount}/{active.dailyLimit}</div><div className="l">USADAS HOY</div></div>
         <div className="quota-mini"><div className="v">{majority} votos</div><div className="l">PARA APROBAR</div></div>
       </div>
 

@@ -5,13 +5,15 @@ export default function LoginScreen() {
 
   return (
     <div className="login-screen">
-      <div className="logo-glow">💰</div>
+      <div className="logo-glow">
+        <img src="/icon.png" alt="Fondo Común Logo" className="app-logo-large" />
+      </div>
       <h1>Fondo Común</h1>
-      <p>Tu billetera compartida para viajes, comidas y gastos en grupo. Simple como cualquier billetera virtual.</p>
+      <p>Gestión transparente de gastos grupales. Tan simple como cualquier billetera virtual.</p>
       <button className="google-btn" onClick={login}>
         Continuar con Google
       </button>
-      <p className="login-hint">Creamos tu billetera automáticamente y de forma segura. No necesitás instalar nada más.</p>
+      <p className="login-hint">Tu billetera se configura de forma automática y segura. Sin instalaciones adicionales.</p>
     </div>
   );
 }

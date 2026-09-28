@@ -485,9 +485,6 @@ function GruposTab({ groups, activeGroupId, onSelectGroup, onOpenNewGroupSheet, 
           >
             <div className="dash-group-card-main">
               <div className="dash-group-card-name">{g.name}</div>
-              <div className="dash-group-card-meta">
-                Límite por gasto: {fmt(Number(g.creditLimit))} · {g.dailyLimit} por día
-              </div>
             </div>
             <div className="dash-group-card-balance">{fmtFiatFromMon(Number(g.balance || 0))}</div>
             <div className="dash-group-card-action">
@@ -510,7 +507,8 @@ function EstadisticasTab({ stats, maxStat }: { stats: GroupStat[]; maxStat: numb
   const fmt = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
   const barHeight = 28;
   const gap = 14;
-  const chartWidth = 400;
+  const chartWidth = 500; // Aumentado para dar espacio al texto
+  const maxBarWidth = chartWidth - 140 - 100; // 140 para label, 100 para texto
 
   if (stats.length === 0) {
     return <p className="dash-hint">Todavía no hay datos suficientes para mostrar estadísticas.</p>;
@@ -531,15 +529,15 @@ function EstadisticasTab({ stats, maxStat }: { stats: GroupStat[]; maxStat: numb
           </linearGradient>
         </defs>
         {stats.map((s, i) => {
-          const barWidth = (s.amountDeposited / maxStat) * (chartWidth - 120);
+          const barWidth = maxStat === 0 ? 0 : (s.amountDeposited / maxStat) * maxBarWidth;
           const y = i * (barHeight + gap);
           return (
             <g key={s.groupName}>
               <text x={0} y={y + barHeight / 2 + 4} className="dash-chart-label">
                 {s.groupName}
               </text>
-              <rect x={120} y={y} width={Math.max(barWidth, 2)} height={barHeight} rx={6} className="dash-chart-bar" />
-              <text x={120 + barWidth + 8} y={y + barHeight / 2 + 4} className="dash-chart-value">
+              <rect x={140} y={y} width={Math.max(barWidth, 2)} height={barHeight} rx={6} className="dash-chart-bar" />
+              <text x={140 + barWidth + 10} y={y + barHeight / 2 + 4} className="dash-chart-value">
                 {fmtFiatFromMon(s.amountDeposited)}
               </text>
             </g>

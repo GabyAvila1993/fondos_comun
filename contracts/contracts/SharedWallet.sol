@@ -395,7 +395,6 @@ contract SharedWalletFactory {
         uint256 creditLimit,
         uint256 dailyLimit
     ) external returns (address) {
-        require(walletsByOwner[msg.sender].length < _limitFor(msg.sender), "Limite de grupos de tu plan alcanzado");
 
         SharedWallet w = new SharedWallet(groupName, members, creditLimit, dailyLimit, relayer, usdc);
         walletsByOwner[msg.sender].push(address(w));
