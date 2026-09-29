@@ -13,6 +13,15 @@ export class UsersService {
     if (!user) {
       user = this.repo.create({ privyUserId, walletAddress, email, name });
       await this.repo.save(user);
+    } else {
+      // Si el usuario ya existia pero no tenia nombre, email o wallet, lo actualizamos.
+      let updated = false;
+      if (name && !user.name) { user.name = name; updated = true; }
+      if (email && !user.email) { user.email = email; updated = true; }
+      if (walletAddress && !user.walletAddress) { user.walletAddress = walletAddress; updated = true; }
+      if (updated) {
+        await this.repo.save(user);
+      }
     }
     return user;
   }

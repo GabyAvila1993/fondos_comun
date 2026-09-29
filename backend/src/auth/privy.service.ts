@@ -32,9 +32,11 @@ export class PrivyService {
     const embeddedWallet = user.linkedAccounts.find(
       (acc: any) => acc.type === "wallet" && acc.walletClientType === "privy",
     ) as any;
+    const name = user.google?.name || user.twitter?.name || user.discord?.username || user.github?.username || user.apple?.email?.split('@')[0];
     return {
       privyUserId: user.id,
-      email: user.email?.address,
+      email: user.email?.address || user.google?.email || user.apple?.email,
+      name,
       walletAddress: embeddedWallet?.address as string | undefined,
     };
   }

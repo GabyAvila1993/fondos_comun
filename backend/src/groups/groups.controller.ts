@@ -27,7 +27,7 @@ export class GroupsController {
   /** Resuelve el usuario local (creandolo si es su primera vez) a partir del token de Privy. */
   private async currentUser(req: any) {
     const privyUser = await this.privy.getUser(req.privyUserId);
-    return this.users.findOrCreate(privyUser.privyUserId, privyUser.walletAddress!, privyUser.email);
+    return this.users.findOrCreate(privyUser.privyUserId, privyUser.walletAddress!, privyUser.email, privyUser.name);
   }
 
   @Get()
