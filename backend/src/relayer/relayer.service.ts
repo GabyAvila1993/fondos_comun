@@ -107,14 +107,27 @@ export class RelayerService {
   // ---------- Lectura de estado (para pintar la pantalla) ----------
   async getGroupState(groupAddress: string, _userAddress: string) {
     const contract = this.groupContract(groupAddress);
-    const [name, creditLimit, dailyLimit, majority, bal, total] = await Promise.all([
-      contract.name(),
-      contract.creditLimit(),
-      contract.dailyLimit(),
-      contract.majorityNeeded(),
-      contract.balance(),
-      contract.transactionCount(),
-    ]);
+    
+    // Add retry for RPC flakes on testnet
+    let name, creditLimit, dailyLimit, majority, bal, total;
+    let attempts = 0;
+    while (attempts < 3) {
+      try {
+        [name, creditLimit, dailyLimit, majority, bal, total] = await Promise.all([
+          contract.name(),
+          contract.creditLimit(),
+          contract.dailyLimit(),
+          contract.majorityNeeded(),
+          contract.balance(),
+          contract.transactionCount(),
+        ]);
+        break; // Success
+      } catch (err: any) {
+        attempts++;
+        if (attempts >= 3) throw err;
+        await new Promise(r => setTimeout(r, 1000)); // wait 1s before retry
+      }
+    }
 
     const fmt = (v: bigint) => ethers.formatUnits(v, USDC_DECIMALS);
     const transactions = [];

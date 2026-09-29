@@ -29,8 +29,15 @@ export class GroupsController {
   }
 
   @Get()
-  list() {
-    return this.groups.findAll();
+  async list(@Req() req: any) {
+    const user = await this.currentUser(req);
+    return this.groups.findAllForUser(user.id);
+  }
+
+  @Get("stats/me")
+  async getMyStats(@Req() req: any) {
+    const user = await this.currentUser(req);
+    return this.groups.getUserStats(user.id);
   }
 
   @Get(":id")
@@ -38,7 +45,8 @@ export class GroupsController {
     const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
     const state = await this.relayer.getGroupState(group!.contractAddress, user.walletAddress);
-    return { ...group, ...state };
+    const deposits = await this.groups.getDepositsForGroup(group!.id);
+    return { ...group, ...state, deposits };
   }
 
   /** Estado real del fondo, leído en vivo desde Monad: balance, límites y feed de movimientos. */
@@ -47,7 +55,8 @@ export class GroupsController {
     const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
     const onchain = await this.relayer.getGroupState(group!.contractAddress, user.walletAddress);
-    return { id: group!.id, contractAddress: group!.contractAddress, ...onchain };
+    const deposits = await this.groups.getDepositsForGroup(group!.id);
+    return { id: group!.id, contractAddress: group!.contractAddress, ...onchain, deposits };
   }
 
   @Post()
@@ -70,13 +79,16 @@ export class GroupsController {
     const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
     await this.relayer.joinGroup(group!.contractAddress, user.walletAddress, BigInt(body.nonce), body.signature);
+    await this.groups.addMember(groupId, user.id);
     return { ok: true };
   }
 
   /** Deposito fiat -> el backend de pagos (Mercado Pago/banco) confirma y llama esto. */
   @Post(":id/deposit")
-  async deposit(@Param("id") groupId: string, @Body() body: { fiatAmount: number }) {
+  async deposit(@Req() req: any, @Param("id") groupId: string, @Body() body: { fiatAmount: number }) {
+    const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
+    await this.groups.recordDeposit(user.id, group!.id, body.fiatAmount);
     return this.relayer.depositFiatAsOnchain(group!.contractAddress, body.fiatAmount);
   }
 

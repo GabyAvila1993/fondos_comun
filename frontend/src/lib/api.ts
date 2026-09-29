@@ -17,6 +17,9 @@ async function request(path: string, token: string, options: RequestInit = {}) {
 export const api = {
   listGroups: (token: string): Promise<Group[]> => request("/groups", token),
 
+  getMyStats: (token: string): Promise<{ groupId: string; groupName: string; amountDeposited: number }[]> => 
+    request("/groups/stats/me", token),
+
   getGroup: (token: string, groupId: string): Promise<Group> => request(`/groups/${groupId}`, token),
 
   createGroup: (token: string, body: { name: string; creditLimit: string; dailyLimit: number }) =>

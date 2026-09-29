@@ -8,6 +8,16 @@ export interface Group {
   balance?: string;
   transactions?: Tx[];
   pending?: Tx[];
+  members?: string[];
+  deposits?: Deposit[];
+}
+
+export interface Deposit {
+  id: string;
+  userId: string;
+  groupId: string;
+  amount: number;
+  createdAt: string;
 }
 
 export interface Tx {
@@ -20,4 +30,9 @@ export interface Tx {
   votesFor: number;
   votesAgainst: number;
   createdAt: number;
+}
+
+export interface UserStats {
+  totalDeposited: string;
+  groupsCount: number;
 }

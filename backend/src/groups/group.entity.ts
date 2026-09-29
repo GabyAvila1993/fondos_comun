@@ -25,6 +25,9 @@ export class Group {
   @Column()
   dailyLimit: number;
 
+  @Column("simple-array", { default: "" })
+  members: string[];
+
   @CreateDateColumn()
   createdAt: Date;
 }

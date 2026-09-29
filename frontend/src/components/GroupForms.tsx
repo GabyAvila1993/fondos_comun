@@ -1,174 +1,303 @@
 import { useState } from "react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import type { Group } from "../types";
+import { api } from "../lib/api";
+import { signTyped, toWei } from "../lib/eip712";
 
-// Conversión del usuario: pesos -> MON.
-// Ejemplo: 2000 pesos = 2 MON.
-const FIAT_TO_MON_RATE = 1000;
+// Helpers para montos (simulando 1 MON = $1000 ARS)
+const FIAT_TO_MON = 1000;
+const monToFiat = (mon: number) => mon * FIAT_TO_MON;
+const fiatToMon = (fiat: number) => fiat / FIAT_TO_MON;
 
-const fiatToMon = (fiatAmount: number) => Number(fiatAmount) / FIAT_TO_MON_RATE;
+interface GroupFormsProps {
+  type: "new_group" | "deposit" | "spend" | "join_group";
+  group?: Group;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
 
+export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFormsProps) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { user, getAccessToken } = usePrivy();
+  const { wallets } = useWallets();
 
+  const handleCreateGroup = async (name: string, limitFiat: number) => {
+    try {
+      setLoading(true);
+      setError("");
+      
+      const token = await getAccessToken();
+      if (!token) throw new Error("No autenticado");
 
-// Formularios centralizados para evitar duplicación de código
-// Estos formularios se importan tanto en UserDashboard como en GroupDetail
-
-export function DepositForm({ onSubmit, error, isSubmitting }: { onSubmit: (amount: number) => void; error: string; isSubmitting: boolean }) {
-  const [amount, setAmount] = useState("");
-  const [localError, setLocalError] = useState("");
-  const [showPaymentInfo, setShowPaymentInfo] = useState(false);
-  const [paymentCode, setPaymentCode] = useState("");
-
-  const handleSubmit = () => {
-    if (!amount || Number(amount) <= 0) {
-      setLocalError("Ingresa un monto válido");
-      return;
+      // dailyLimit is 0 for simplicity, and limitFiat stringified
+      await api.createGroup(token, {
+        name,
+        creditLimit: String(fiatToMon(limitFiat)),
+        dailyLimit: 0
+      });
+      
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    setLocalError("");
-    setPaymentCode(Math.floor(100000000 + Math.random() * 900000000).toString());
-    setShowPaymentInfo(true);
   };
 
-  const handleConfirmPayment = () => {
-    onSubmit(Number(amount));
+  const handleDeposit = async (amountFiat: number) => {
+    if (!group) return;
+    try {
+      setLoading(true);
+      setError("");
+      
+      const token = await getAccessToken();
+      if (!token) throw new Error("No autenticado");
+      
+      // Simular redirección a Mercado Pago
+      window.open("https://www.mercadopago.com.ar", "_blank");
+      
+      await api.deposit(token, group.id, amountFiat);
+      
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleSpend = async (amountFiat: number, desc: string) => {
+    if (!group) return;
+    try {
+      setLoading(true);
+      setError("");
+      
+      const token = await getAccessToken();
+      if (!token) throw new Error("No autenticado");
+
+      const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+      if (!embeddedWallet) throw new Error("Wallet no encontrada");
+
+      const { nonce } = await api.getNonce(token, group.id);
+      
+      const forceApproval = amountFiat > monToFiat(Number(group.creditLimit));
+      
+      const amountMon = String(fiatToMon(amountFiat));
+      
+      const message = {
+        user: user?.wallet?.address,
+        amount: toWei(amountMon), // Convert to wei for contract
+        desc,
+        forceApproval,
+        nonce: parseInt(nonce, 10)
+      };
+
+      const signature = await signTyped(embeddedWallet, "RequestExpense", group.contractAddress, message);
+
+      await api.requestExpense(token, group.id, {
+        amountMon,
+        desc,
+        forceApproval,
+        nonce,
+        signature
+      });
+      
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoin = async () => {
+    if (!group) return;
+    try {
+      setLoading(true);
+      setError("");
+      
+      const token = await getAccessToken();
+      if (!token) throw new Error("No autenticado");
+
+      const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+      if (!embeddedWallet) throw new Error("Wallet no encontrada");
+
+      const { nonce } = await api.getNonce(token, group.id);
+      
+      const message = {
+        user: user?.wallet?.address,
+        nonce: parseInt(nonce, 10)
+      };
+
+      const signature = await signTyped(embeddedWallet, "Join", group.contractAddress, message);
+
+      await api.join(token, group.id, {
+        nonce,
+        signature
+      });
+
+      alert("¡Te uniste al grupo con éxito!");
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (type === "new_group") return <NewGroupForm onSubmit={handleCreateGroup} error={error} loading={loading} />;
+  if (type === "deposit") return <DepositForm onSubmit={handleDeposit} error={error} loading={loading} />;
+  if (type === "join_group") return (
+    <div style={{ textAlign: "center", padding: "20px 0" }}>
+      <p style={{ marginBottom: "20px" }}>¿Quieres unirte al grupo <strong>{group?.name}</strong>?</p>
+      {error && <div className="error-msg">{error}</div>}
+      <button 
+        className="btn-primary" 
+        style={{ width: "100%" }} 
+        onClick={handleJoin} 
+        disabled={loading}
+      >
+        {loading ? "Uniendo..." : "Unirme al Grupo"}
+      </button>
+    </div>
+  );
+  if (type === "spend") {
+    const limit = group ? monToFiat(Number(group.creditLimit)) : 0;
+    return <SpendForm limit={limit} onSubmit={handleSpend} error={error} loading={loading} />;
+  }
+  return null;
+}
+
+// ------------------------------------------------------------
+// FORMS INTERNOS
+// ------------------------------------------------------------
+
+function DepositForm({ onSubmit, error, loading }: { onSubmit: (a: number) => void; error: string; loading: boolean }) {
+  const [amount, setAmount] = useState("");
+  const [step, setStep] = useState(1);
 
   return (
-    <>
-      <h3 className="dash-form-title">Ingresar fondos</h3>
-      
-      {!showPaymentInfo ? (
+    <div>
+      {step === 1 ? (
         <>
-          <p className="hint">Ingrese el monto para generar un código de pago o abonar mediante Mercado Pago.</p>
-          <div className="dash-amount-input-wrap">
-            <input
-              className={`dash-input ${localError || error ? 'dash-input-error' : ''}`}
-              type="number"
-              placeholder="Monto a ingresar"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+          <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>
+            Ingresa el monto para generar un código de pago o abonar mediante transferencia.
+          </p>
+          <div className="form-group">
+            <label className="form-label">Monto a ingresar (ARS)</label>
+            <input 
+              className="form-input" 
+              type="number" 
+              placeholder="$0" 
+              value={amount} 
+              onChange={e => setAmount(e.target.value)} 
             />
           </div>
-          {(localError || error) && <div className="dash-field-error">{localError || error}</div>}
-          <button className="btn btn-gold" onClick={handleSubmit} disabled={isSubmitting}>
-            Continuar al pago
+          {error && <div className="error-msg">{error}</div>}
+          <button className="btn-primary" style={{ width: "100%", marginTop: "16px" }} onClick={() => setStep(2)}>
+            Generar código de pago
           </button>
         </>
       ) : (
-        <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <p>Tu código de pago en sucursal es:</p>
-          <h2 style={{ letterSpacing: "2px", margin: "0" }}>{paymentCode}</h2>
-          <p className="hint">O si prefieres, simula el pago digital ahora:</p>
-          <button className="btn btn-gold" onClick={handleConfirmPayment} disabled={isSubmitting}>
-            {isSubmitting ? "Procesando..." : "Simular pago con Mercado Pago"}
+        <div className="text-center">
+          <p style={{ color: "var(--text-muted)", marginBottom: "16px" }}>Código para depósito en efectivo (Rapipago/PagoFácil):</p>
+          <h2 style={{ fontSize: "2.5rem", letterSpacing: "4px", margin: "0 0 24px" }}>928374</h2>
+          <p style={{ color: "var(--text-muted)", marginBottom: "24px", fontSize: "0.85rem" }}>
+            O si prefieres pago digital, simula tu depósito con Mercado Pago.
+          </p>
+          
+          <button 
+            style={{ 
+              width: "100%", 
+              backgroundColor: "#009EE3", 
+              color: "white", 
+              border: "none", 
+              padding: "16px", 
+              borderRadius: "12px", 
+              fontWeight: 600, 
+              cursor: "pointer",
+              marginBottom: "12px",
+              fontFamily: "inherit",
+              fontSize: "1rem"
+            }} 
+            onClick={() => onSubmit(Number(amount))} 
+            disabled={loading}
+          >
+            {loading ? "Procesando el pago..." : "Pagar con Mercado Pago"}
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
-export function SpendForm({
-  creditLimit,
-  error,
-  danger,
-  isSubmitting,
-  onSubmit,
-}: {
-  creditLimit: number;
-  error: string;
-  danger?: boolean;
-  isSubmitting: boolean;
-  onSubmit: (amount: number, desc: string) => void;
-}) {
+function SpendForm({ limit, onSubmit, error, loading }: { limit: number; onSubmit: (a: number, d: string) => void; error: string; loading: boolean }) {
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
-  const [cvu, setCvu] = useState("");
-  const [localError, setLocalError] = useState("");
 
-  const handleSubmit = () => {
-    if (!amount || Number(amount) <= 0) {
-      setLocalError("Ingresa un monto válido");
-      return;
-    }
-    if (!cvu.trim()) {
-      setLocalError("El Alias o CVU es requerido");
-      return;
-    }
-    if (!desc.trim()) {
-      setLocalError("La descripción es requerida");
-      return;
-    }
-    setLocalError("");
-    onSubmit(Number(amount), `CVU/Alias: ${cvu} - ${desc}`);
-  };
+  const numAmount = Number(amount);
+  const exceeds = numAmount > limit;
 
   return (
-    <>
-      <h3 className="dash-form-title">{danger ? "Solicitar transferencia especial" : "Transferir fondos"}</h3>
-      <p className="hint">
-        {danger
-          ? "Esta operación requiere la aprobación por mayoría de los integrantes del grupo."
-          : "Transfiera los fondos a una cuenta bancaria indicando el CVU o Alias correspondiente."}
+    <div>
+      <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>
+        Límite de gasto directo: <strong>${limit.toLocaleString("es-AR")}</strong>
       </p>
-      <div className="dash-amount-input-wrap">
-        <input
-          className={`dash-input ${localError || error ? 'dash-input-error' : ''}`}
-          type="number"
-          placeholder="Monto"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
+
+      <div className="form-group">
+        <label className="form-label">Monto (ARS)</label>
+        <input className="form-input" type="number" placeholder="$0" value={amount} onChange={e => setAmount(e.target.value)} />
       </div>
-      <input
-        className={`dash-input ${localError || error ? 'dash-input-error' : ''}`}
-        type="text"
-        placeholder="Alias o CVU"
-        value={cvu}
-        onChange={(e) => setCvu(e.target.value)}
-      />
-      <input
-        className={`dash-input ${localError || error ? 'dash-input-error' : ''}`}
-        type="text"
-        placeholder="Descripción del retiro"
-        value={desc}
-        onChange={(e) => setDesc(e.target.value)}
-      />
-      {(localError || error) && <div className="dash-field-error">{localError || error}</div>}
-      <button className={`btn ${danger ? "btn-danger" : "btn-gold"}`} onClick={handleSubmit} disabled={isSubmitting}>
-        {isSubmitting ? "Procesando..." : (danger ? "Enviar solicitud" : "Confirmar transferencia")}
+
+      <div className="form-group">
+        <label className="form-label">Descripción</label>
+        <input className="form-input" type="text" placeholder="Ej: Pizza viernes" value={desc} onChange={e => setDesc(e.target.value)} />
+      </div>
+
+      {exceeds && amount !== "" && (
+        <div style={{ background: "var(--danger-light)", color: "var(--danger)", padding: "12px", borderRadius: "12px", fontSize: "0.85rem", marginBottom: "20px" }}>
+          Al superar el límite libre de ${limit}, este gasto pasará a <strong>Votación Mayoritaria</strong>.
+        </div>
+      )}
+
+      {error && <div className="error-msg">{error}</div>}
+      
+      <button className="btn-primary" style={{ width: "100%", marginTop: "16px" }} onClick={() => onSubmit(numAmount, desc)} disabled={loading}>
+        {loading ? "Procesando..." : (exceeds ? "Pedir Aprobación" : "Gastar directamente")}
       </button>
-    </>
+    </div>
   );
 }
 
-export function NewGroupForm({ onSubmit, error, isSubmitting }: { onSubmit: (name: string, creditLimit: string) => void; error: string; isSubmitting: boolean }) {
+function NewGroupForm({ onSubmit, error, loading }: { onSubmit: (n: string, l: number) => void; error: string; loading: boolean }) {
   const [name, setName] = useState("");
-  const [localError, setLocalError] = useState("");
-
-  const handleSubmit = () => {
-    if (!name.trim()) {
-      setLocalError("El nombre del grupo es requerido");
-      return;
-    }
-    setLocalError("");
-    // Se pasa un límite infinito por defecto ya que las restricciones no aplican
-    onSubmit(name, "1000000000");
-  };
+  const [limit, setLimit] = useState("");
 
   return (
-    <>
-      <h3 className="dash-form-title">Crear nuevo fondo común</h3>
-      <p className="hint">Una vez creado, podrá compartir el enlace de invitación con los demás integrantes.</p>
-      <input
-        className={`dash-input ${localError || error ? 'dash-input-error' : ''}`}
-        type="text"
-        placeholder="Nombre del grupo"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      {(localError || error) && <div className="dash-field-error">{localError || error}</div>}
-      <button className="btn btn-gold" onClick={handleSubmit} disabled={isSubmitting}>
-        {isSubmitting ? "Creando..." : "Crear grupo"}
+    <div>
+      <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>
+        Crea un nuevo fondo común e invita a tus amigos o familiares.
+      </p>
+
+      <div className="form-group">
+        <label className="form-label">Nombre del grupo</label>
+        <input className="form-input" type="text" placeholder="Ej: Viaje Bariloche" value={name} onChange={e => setName(e.target.value)} />
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Límite libre de gasto (ARS)</label>
+        <input className="form-input" type="number" placeholder="Ej: 5000" value={limit} onChange={e => setLimit(e.target.value)} />
+        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px" }}>
+          Cualquier monto superior requerirá aprobación del grupo.
+        </div>
+      </div>
+
+      {error && <div className="error-msg">{error}</div>}
+      
+      <button className="btn-primary" style={{ width: "100%", marginTop: "16px" }} onClick={() => onSubmit(name, Number(limit))} disabled={loading}>
+        {loading ? "Creando en Monad..." : "Crear Grupo"}
       </button>
-    </>
+    </div>
   );
 }

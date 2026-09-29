@@ -6,13 +6,14 @@ import { GroupsModule } from "./groups/groups.module";
 import { RelayerModule } from "./relayer/relayer.module";
 import { User } from "./users/user.entity";
 import { Group } from "./groups/group.entity";
+import { Deposit } from "./groups/deposit.entity";
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: "postgres",
       url: process.env.DATABASE_URL,
-      entities: [User, Group],
+      entities: [User, Group, Deposit],
       // synchronize:true es comodo para el prototipo del hackathon.
       // En produccion, usar migraciones en vez de sincronizar en caliente.
       synchronize: true,

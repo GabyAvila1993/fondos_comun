@@ -17,7 +17,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       config={{
         loginMethods: ["google", "email"],
         embeddedWallets: { createOnLogin: "users-without-wallets" },
-        appearance: { theme: "dark", accentColor: "#e0a838" },
+        appearance: { theme: "light", accentColor: "#0F3D37" },
       }}
     >
       <App />
