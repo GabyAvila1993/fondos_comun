@@ -32,7 +32,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
       const token = await getAccessToken();
       if (!token) throw new Error("No autenticado");
 
-      tid = toast.loading("Creando grupo en Monad...");
+      tid = toast.loading("Creando grupo...");
 
       const start = Date.now();
       await api.createGroup(token, {
@@ -62,7 +62,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
       const token = await getAccessToken();
       if (!token) throw new Error("No autenticado");
       
-      tid = toast.loading("Confirmando depósito en Monad...");
+      tid = toast.loading("Confirmando depósito...");
       const start = Date.now();
       await api.deposit(token, group.id, amountFiat);
       const end = Date.now();
@@ -147,7 +147,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
 
       const signature = await signTyped(embeddedWallet, "Join", group.contractAddress, message);
 
-      const tid = toast.loading("Registrando en Monad...");
+      const tid = toast.loading("Procesando transacción...");
       const start = Date.now();
       await api.join(token, group.id, {
         nonce,
@@ -327,7 +327,7 @@ function NewGroupForm({ onSubmit, error, loading }: { onSubmit: (n: string, l: n
       {error && <div className="error-msg">{error}</div>}
       
       <button className="btn-primary" style={{ width: "100%", marginTop: "16px" }} onClick={() => onSubmit(name, Number(limit))} disabled={loading}>
-        {loading ? "Creando en Monad..." : "Crear Grupo"}
+        {loading ? "Creando..." : "Crear Grupo"}
       </button>
     </div>
   );

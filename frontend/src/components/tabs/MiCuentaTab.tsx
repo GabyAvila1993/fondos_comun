@@ -12,7 +12,7 @@ interface MiCuentaTabProps {
 const fmt = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 
 export default function MiCuentaTab({ userAddress, userEmail, stats, onLogout }: MiCuentaTabProps) {
-  const defaultName = userEmail ? userEmail.split('@')[0] : "Usuario Monad";
+  const defaultName = userEmail ? userEmail.split('@')[0] : "Usuario";
   const [userName, setUserName] = useState(() => localStorage.getItem("monad_username") || defaultName);
 
   const handleEditName = () => {

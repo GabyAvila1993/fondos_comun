@@ -131,7 +131,7 @@ export default function UserDashboard() {
 
       const signature = await signTyped(embeddedWallet, "Vote", activeGroup.contractAddress, message);
 
-      const tid = toast.loading("Aprobando en Monad...");
+      const tid = toast.loading("Aprobando gasto...");
       const start = Date.now();
       await api.vote(token, activeGroup.id, {
         txId,
@@ -169,7 +169,7 @@ export default function UserDashboard() {
 
       const signature = await signTyped(embeddedWallet, "Vote", activeGroup.contractAddress, message);
 
-      const tid = toast.loading("Rechazando en Monad...");
+      const tid = toast.loading("Rechazando gasto...");
       const start = Date.now();
       await api.vote(token, activeGroup.id, {
         txId,
