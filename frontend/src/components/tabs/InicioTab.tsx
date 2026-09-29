@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Group } from "../../types";
 import { Plus, Wallet, FileText, Users, ShareNetwork, CaretDown } from "@phosphor-icons/react";
+import toast from "react-hot-toast";
 interface InicioTabProps {
   groups: Group[];
   activeGroupId: string;
@@ -21,7 +22,7 @@ export default function InicioTab({ groups, activeGroupId, onSelectGroup, onGrou
     e.stopPropagation();
     const inviteLink = `${window.location.origin}/?join=${groupId}`;
     navigator.clipboard.writeText(inviteLink);
-    alert("¡Enlace de invitación copiado!");
+    toast.success("¡Enlace de invitación copiado!");
   };
 
   return (

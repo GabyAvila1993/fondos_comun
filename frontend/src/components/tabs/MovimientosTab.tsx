@@ -21,24 +21,9 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
   const allMovements = useMemo(() => {
     const list: any[] = [];
     for (const g of groups) {
-      const expenses = (g.transactions || []).map((tx, idx) => ({
-        type: "out" as const,
-        id: `tx-${tx.id}`,
-        groupId: g.id,
-        groupName: g.name,
-        user: tx.proposer?.substring(0, 6) || "Unknown",
-        avatar: tx.proposer?.substring(2, 4).toUpperCase() || "U",
-        desc: tx.desc || "Gasto general",
-        amount: Number(tx.amount) * 1000,
-        // Simulamos un timestamp reciente para los gastos de la blockchain
-        timestamp: Date.now() - ((g.transactions?.length || 0) - idx) * 60000 
-      }));
-
       const deposits = (g.deposits || []).map(dep => {
         const dateStr = String(dep.createdAt);
-        // Postgres sometimes returns timestamp without Z. Force UTC if missing timezone indicator
-        const isUTC = dateStr.endsWith('Z') || dateStr.includes('+');
-        const parsedTime = new Date(isUTC ? dateStr : dateStr + 'Z').getTime();
+        const parsedTime = new Date(dateStr.endsWith('Z') || dateStr.includes('+') ? dateStr : dateStr + 'Z').getTime();
 
         return {
           type: "in" as const,
@@ -49,9 +34,27 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
           avatar: "IN",
           desc: "Ingreso de dinero",
           amount: dep.amount,
-          timestamp: parsedTime
+          timestamp: isNaN(parsedTime) ? Date.now() : parsedTime
         };
       });
+
+      // Calcular la fecha base para los gastos: el máximo entre Date.now() y el depósito más reciente.
+      // Esto soluciona la desincronización si la DB tiene el reloj más adelantado.
+      const maxDepositTime = deposits.reduce((max, d) => Math.max(max, d.timestamp), 0);
+      const baseTime = Math.max(Date.now(), maxDepositTime);
+
+      const expenses = (g.transactions || []).map((tx, idx) => ({
+        type: "out" as const,
+        id: `tx-${tx.id}`,
+        groupId: g.id,
+        groupName: g.name,
+        user: tx.proposer?.substring(0, 6) || "Unknown",
+        avatar: tx.proposer?.substring(2, 4).toUpperCase() || "U",
+        desc: tx.desc || "Gasto general",
+        amount: Number(tx.amount) * 1000,
+        // Usamos baseTime para intercalar los gastos con los depósitos correctamente
+        timestamp: baseTime - ((g.transactions?.length || 0) - idx) * 60000 
+      }));
       list.push(...expenses, ...deposits);
     }
     return list.sort((a, b) => b.timestamp - a.timestamp);

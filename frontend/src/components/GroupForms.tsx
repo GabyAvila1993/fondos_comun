@@ -2,6 +2,7 @@ import { useState } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import type { Group } from "../types";
 import { api } from "../lib/api";
+import toast from "react-hot-toast";
 import { signTyped, toWei } from "../lib/eip712";
 
 // Helpers para montos (simulando 1 MON = $1000 ARS)
@@ -137,7 +138,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
         signature
       });
 
-      alert("¡Te uniste al grupo con éxito!");
+      toast.success("¡Te uniste al grupo con éxito!");
       onSuccess();
     } catch (err: any) {
       setError(err.message);

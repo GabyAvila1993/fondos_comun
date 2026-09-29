@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { api } from "../lib/api";
 import { signTyped } from "../lib/eip712";
+import toast from "react-hot-toast";
 import type { Group, UserStats } from "../types";
 
 // Componentes
@@ -9,6 +10,7 @@ import BottomNav, { Tab } from "./BottomNav";
 import InicioTab from "./tabs/InicioTab";
 import MovimientosTab from "./tabs/MovimientosTab";
 import AprobacionesTab from "./tabs/AprobacionesTab";
+import UnirseTab from "./tabs/UnirseTab";
 import MiCuentaTab from "./tabs/MiCuentaTab";
 import Sheet from "./Sheet";
 import GroupForms from "./GroupForms";
@@ -80,7 +82,7 @@ export default function UserDashboard() {
             setJoinGroupData(joinGroup);
             setSheetView("join_group");
           } catch (err) {
-            alert("No se pudo cargar el grupo al que te invitaron.");
+            toast.error("No se pudo cargar el grupo al que te invitaron.");
           }
         }
       }
@@ -90,6 +92,24 @@ export default function UserDashboard() {
   };
 
   const activeGroup = groups.find((g) => g.id === activeGroupId);
+
+  const handleJoinInit = async (groupId: string) => {
+    try {
+      const token = await getAccessToken();
+      const existing = groups.find(g => g.id === groupId);
+      if (existing) {
+        toast("Ya eres miembro de este grupo.", { icon: "ℹ️" });
+        setActiveGroupId(existing.id);
+        setActiveTab("movimientos");
+      } else {
+        const joinGroup = await api.getGroup(token!, groupId);
+        setJoinGroupData(joinGroup);
+        setSheetView("join_group");
+      }
+    } catch (err) {
+      toast.error("No se pudo cargar el grupo al que intentas unirte.");
+    }
+  };
 
   const handleApprove = async (txId: number) => {
     if (!activeGroup) return;
@@ -118,10 +138,10 @@ export default function UserDashboard() {
         signature
       });
 
-      alert("¡Voto registrado con éxito!");
+      toast.success("¡Voto registrado con éxito!");
       loadData();
     } catch (err: any) {
-      alert("Error al aprobar: " + err.message);
+      toast.error("Error al aprobar: " + err.message);
     }
   };
 
@@ -152,10 +172,10 @@ export default function UserDashboard() {
         signature
       });
 
-      alert("¡Voto de rechazo registrado con éxito!");
+      toast.success("¡Voto de rechazo registrado con éxito!");
       loadData();
     } catch (err: any) {
-      alert("Error al rechazar: " + err.message);
+      toast.error("Error al rechazar: " + err.message);
     }
   };
 
@@ -178,6 +198,9 @@ export default function UserDashboard() {
             groups={groups} 
             initialGroupId={forceGlobal ? null : activeGroupId} 
           />
+        )}
+        {activeTab === "unirse" && (
+          <UnirseTab onJoinInit={handleJoinInit} />
         )}
         {activeTab === "aprobaciones" && (
           <AprobacionesTab 

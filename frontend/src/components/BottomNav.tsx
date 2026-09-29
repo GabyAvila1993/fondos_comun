@@ -1,6 +1,6 @@
-import { House, ListDashes, CheckCircle, User } from "@phosphor-icons/react";
+import { House, ListDashes, CheckCircle, User, Link } from "@phosphor-icons/react";
 
-export type Tab = "inicio" | "movimientos" | "aprobaciones" | "perfil";
+export type Tab = "inicio" | "movimientos" | "unirse" | "aprobaciones" | "perfil";
 
 export default function BottomNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
@@ -12,6 +12,10 @@ export default function BottomNav({ active, onChange }: { active: Tab; onChange:
       <button className={`nav-item ${active === "movimientos" ? "active" : ""}`} onClick={() => onChange("movimientos")}>
         <ListDashes weight={active === "movimientos" ? "fill" : "regular"} />
         <span>Movimientos</span>
+      </button>
+      <button className={`nav-item ${active === "unirse" ? "active" : ""}`} onClick={() => onChange("unirse")}>
+        <Link weight={active === "unirse" ? "fill" : "regular"} />
+        <span>Unirse</span>
       </button>
       <button className={`nav-item ${active === "aprobaciones" ? "active" : ""}`} onClick={() => onChange("aprobaciones")}>
         <div style={{ position: "relative" }}>

@@ -7,6 +7,7 @@ import { RelayerModule } from "./relayer/relayer.module";
 import { User } from "./users/user.entity";
 import { Group } from "./groups/group.entity";
 import { Deposit } from "./groups/deposit.entity";
+import { NotificationsModule } from "./notifications/notifications.module";
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { Deposit } from "./groups/deposit.entity";
     UsersModule,
     GroupsModule,
     RelayerModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

@@ -4,6 +4,7 @@ import { RelayerService } from "../relayer/relayer.service";
 import { UsersService } from "../users/users.service";
 import { PrivyAuthGuard } from "../auth/privy-auth.guard";
 import { PrivyService } from "../auth/privy.service";
+import { NotificationsGateway } from "../notifications/notifications.gateway";
 
 /**
  * Todos estos endpoints reciben la FIRMA que el usuario ya hizo en el
@@ -20,6 +21,7 @@ export class GroupsController {
     private relayer: RelayerService,
     private users: UsersService,
     private privy: PrivyService,
+    private notifications: NotificationsGateway,
   ) {}
 
   /** Resuelve el usuario local (creandolo si es su primera vez) a partir del token de Privy. */
@@ -89,7 +91,13 @@ export class GroupsController {
     const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
     await this.groups.recordDeposit(user.id, group!.id, body.fiatAmount);
-    return this.relayer.depositFiatAsOnchain(group!.contractAddress, body.fiatAmount);
+    await this.relayer.depositFiatAsOnchain(group!.contractAddress, body.fiatAmount);
+    
+    this.notifications.emitNotification(group!.id, "new_movement", {
+      type: "deposit",
+      message: `${user.email || user.name || 'Alguien'} ingresó $${body.fiatAmount} al fondo común.`
+    });
+    return { ok: true };
   }
 
   @Post(":id/expense")
@@ -109,6 +117,12 @@ export class GroupsController {
       BigInt(body.nonce),
       body.signature,
     );
+
+    this.notifications.emitNotification(group!.id, "new_movement", {
+      type: "expense",
+      message: `${user.email || user.name || 'Un miembro'} generó un gasto: ${body.desc} por $${Number(body.amountMon) * 1000}`
+    });
+
     return { ok: true };
   }
 
@@ -121,6 +135,12 @@ export class GroupsController {
     const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
     await this.relayer.vote(group!.contractAddress, user.walletAddress, body.txId, body.approve, BigInt(body.nonce), body.signature);
+    
+    this.notifications.emitNotification(group!.id, "vote", {
+      type: "vote",
+      message: `${user.email || user.name || 'Un miembro'} votó ${body.approve ? 'a favor' : 'en contra'} del gasto #${body.txId}`
+    });
+
     return { ok: true };
   }
 }
