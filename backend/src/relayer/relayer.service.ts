@@ -101,6 +101,7 @@ export class RelayerService {
     const contract = this.groupContract(groupAddress);
     const tx = await contract.deposit(amountUnits);
     await tx.wait();
+    
     return { usdAmount };
   }
 

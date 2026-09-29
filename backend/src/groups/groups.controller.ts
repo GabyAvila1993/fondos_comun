@@ -48,7 +48,17 @@ export class GroupsController {
     const group = await this.groups.findOne(groupId);
     const state = await this.relayer.getGroupState(group!.contractAddress, user.walletAddress);
     const deposits = await this.groups.getDepositsForGroup(group!.id);
-    return { ...group, ...state, deposits };
+    
+    const memberUsers = await this.users.findMany(group!.members || []);
+    const usersMap: Record<string, {name?: string, email?: string}> = {};
+    for (const u of memberUsers) {
+      usersMap[u.id] = { name: u.name, email: u.email };
+      if (u.walletAddress) {
+        usersMap[u.walletAddress.toLowerCase()] = { name: u.name, email: u.email };
+      }
+    }
+    
+    return { ...group, ...state, deposits, usersMap };
   }
 
   /** Estado real del fondo, leído en vivo desde Monad: balance, límites y feed de movimientos. */
@@ -58,7 +68,17 @@ export class GroupsController {
     const group = await this.groups.findOne(groupId);
     const onchain = await this.relayer.getGroupState(group!.contractAddress, user.walletAddress);
     const deposits = await this.groups.getDepositsForGroup(group!.id);
-    return { id: group!.id, contractAddress: group!.contractAddress, ...onchain, deposits };
+
+    const memberUsers = await this.users.findMany(group!.members || []);
+    const usersMap: Record<string, {name?: string, email?: string}> = {};
+    for (const u of memberUsers) {
+      usersMap[u.id] = { name: u.name, email: u.email };
+      if (u.walletAddress) {
+        usersMap[u.walletAddress.toLowerCase()] = { name: u.name, email: u.email };
+      }
+    }
+
+    return { id: group!.id, contractAddress: group!.contractAddress, ...onchain, deposits, usersMap };
   }
 
   @Post()
@@ -93,9 +113,10 @@ export class GroupsController {
     await this.groups.recordDeposit(user.id, group!.id, body.fiatAmount);
     await this.relayer.depositFiatAsOnchain(group!.contractAddress, body.fiatAmount);
     
+    const userName = user.name || (user.email ? user.email.split('@')[0] : 'Alguien');
     this.notifications.emitNotification(group!.id, "new_movement", {
       type: "deposit",
-      message: `${user.email || user.name || 'Alguien'} ingresó $${body.fiatAmount} al fondo común.`
+      message: `${userName} ingresó $${body.fiatAmount} al fondo común.`
     });
     return { ok: true };
   }

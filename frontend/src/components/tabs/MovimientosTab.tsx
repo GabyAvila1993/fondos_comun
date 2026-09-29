@@ -21,17 +21,21 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
   const allMovements = useMemo(() => {
     const list: any[] = [];
     for (const g of groups) {
+      const usersMap = (g as any).usersMap || {};
       const deposits = (g.deposits || []).map(dep => {
         const dateStr = String(dep.createdAt);
         const parsedTime = new Date(dateStr.endsWith('Z') || dateStr.includes('+') ? dateStr : dateStr + 'Z').getTime();
+
+        const u = usersMap[dep.userId];
+        const uName = u ? (u.name || (u.email ? u.email.split('@')[0] : "Miembro")) : "Miembro";
 
         return {
           type: "in" as const,
           id: `dep-${dep.id}`,
           groupId: g.id,
           groupName: g.name,
-          user: "Miembro",
-          avatar: "IN",
+          user: uName,
+          avatar: uName.substring(0,2).toUpperCase(),
           desc: "Ingreso de dinero",
           amount: dep.amount,
           timestamp: isNaN(parsedTime) ? Date.now() : parsedTime
@@ -43,18 +47,24 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
       const maxDepositTime = deposits.reduce((max, d) => Math.max(max, d.timestamp), 0);
       const baseTime = Math.max(Date.now(), maxDepositTime);
 
-      const expenses = (g.transactions || []).map((tx, idx) => ({
-        type: "out" as const,
-        id: `tx-${tx.id}`,
-        groupId: g.id,
-        groupName: g.name,
-        user: tx.proposer?.substring(0, 6) || "Unknown",
-        avatar: tx.proposer?.substring(2, 4).toUpperCase() || "U",
-        desc: tx.desc || "Gasto general",
-        amount: Number(tx.amount) * 1000,
-        // Usamos baseTime para intercalar los gastos con los depósitos correctamente
-        timestamp: baseTime - ((g.transactions?.length || 0) - idx) * 60000 
-      }));
+      const expenses = (g.transactions || []).map((tx, idx) => {
+        const u = usersMap[tx.proposer.toLowerCase()];
+        const defaultName = tx.proposer?.substring(0, 6) || "Unknown";
+        const uName = u ? (u.name || (u.email ? u.email.split('@')[0] : defaultName)) : defaultName;
+
+        return {
+          type: "out" as const,
+          id: `tx-${tx.id}`,
+          groupId: g.id,
+          groupName: g.name,
+          user: uName,
+          avatar: uName.substring(0,2).toUpperCase(),
+          desc: tx.desc || "Gasto general",
+          amount: Number(tx.amount) * 1000,
+          // Usamos baseTime para intercalar los gastos con los depósitos correctamente
+          timestamp: baseTime - ((g.transactions?.length || 0) - idx) * 60000 
+        };
+      });
       list.push(...expenses, ...deposits);
     }
     return list.sort((a, b) => b.timestamp - a.timestamp);

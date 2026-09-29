@@ -20,4 +20,11 @@ export class UsersService {
   findById(id: string) {
     return this.repo.findOne({ where: { id } });
   }
+
+  findMany(ids: string[]) {
+    if (!ids || ids.length === 0) return Promise.resolve([]);
+    return this.repo.createQueryBuilder("user")
+      .where("user.id IN (:...ids)", { ids })
+      .getMany();
+  }
 }

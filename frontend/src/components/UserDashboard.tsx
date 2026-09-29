@@ -131,17 +131,21 @@ export default function UserDashboard() {
 
       const signature = await signTyped(embeddedWallet, "Vote", activeGroup.contractAddress, message);
 
+      const tid = toast.loading("Aprobando en Monad...");
+      const start = Date.now();
       await api.vote(token, activeGroup.id, {
         txId,
         approve: true,
         nonce,
         signature
       });
+      const end = Date.now();
 
-      toast.success("¡Voto registrado con éxito!");
+      toast.success(`¡Gasto aprobado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       loadData();
     } catch (err: any) {
       toast.error("Error al aprobar: " + err.message);
+      toast.dismiss();
     }
   };
 
@@ -165,17 +169,21 @@ export default function UserDashboard() {
 
       const signature = await signTyped(embeddedWallet, "Vote", activeGroup.contractAddress, message);
 
+      const tid = toast.loading("Rechazando en Monad...");
+      const start = Date.now();
       await api.vote(token, activeGroup.id, {
         txId,
         approve: false,
         nonce,
         signature
       });
+      const end = Date.now();
 
-      toast.success("¡Voto de rechazo registrado con éxito!");
+      toast.success(`¡Gasto rechazado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       loadData();
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
+      toast.dismiss();
     }
   };
 
@@ -196,7 +204,7 @@ export default function UserDashboard() {
         {activeTab === "movimientos" && (
           <MovimientosTab 
             groups={groups} 
-            initialGroupId={forceGlobal ? null : activeGroupId} 
+            initialGroupId={forceGlobal ? undefined : (activeGroupId || undefined)} 
           />
         )}
         {activeTab === "unirse" && (

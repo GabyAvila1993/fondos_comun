@@ -24,6 +24,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
   const { wallets } = useWallets();
 
   const handleCreateGroup = async (name: string, limitFiat: number) => {
+    let tid;
     try {
       setLoading(true);
       setError("");
@@ -31,16 +32,21 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
       const token = await getAccessToken();
       if (!token) throw new Error("No autenticado");
 
-      // dailyLimit is 0 for simplicity, and limitFiat stringified
+      tid = toast.loading("Creando grupo en Monad...");
+
+      const start = Date.now();
       await api.createGroup(token, {
         name,
         creditLimit: String(fiatToMon(limitFiat)),
         dailyLimit: 0
       });
+      const end = Date.now();
       
+      toast.success(`¡Grupo creado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       onSuccess();
     } catch (err: any) {
       setError(err.message);
+      if (tid) toast.dismiss(tid);
     } finally {
       setLoading(false);
     }
@@ -48,6 +54,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
 
   const handleDeposit = async (amountFiat: number) => {
     if (!group) return;
+    let tid;
     try {
       setLoading(true);
       setError("");
@@ -55,14 +62,16 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
       const token = await getAccessToken();
       if (!token) throw new Error("No autenticado");
       
-      // Simular redirección a Mercado Pago
-      window.open("https://www.mercadopago.com.ar", "_blank");
-      
+      tid = toast.loading("Confirmando depósito en Monad...");
+      const start = Date.now();
       await api.deposit(token, group.id, amountFiat);
+      const end = Date.now();
       
+      toast.success(`¡Depósito exitoso en ${(end-start)/1000}s! ⚡️`, { id: tid });
       onSuccess();
     } catch (err: any) {
       setError(err.message);
+      if (tid) toast.dismiss(tid);
     } finally {
       setLoading(false);
     }
@@ -96,6 +105,8 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
 
       const signature = await signTyped(embeddedWallet, "RequestExpense", group.contractAddress, message);
 
+      const tid = toast.loading("Procesando transacción...");
+      const start = Date.now();
       await api.requestExpense(token, group.id, {
         amountMon,
         desc,
@@ -103,10 +114,13 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
         nonce,
         signature
       });
+      const end = Date.now();
       
+      toast.success(`¡Gasto solicitado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       onSuccess();
     } catch (err: any) {
       setError(err.message);
+      toast.dismiss();
     } finally {
       setLoading(false);
     }
@@ -133,15 +147,19 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
 
       const signature = await signTyped(embeddedWallet, "Join", group.contractAddress, message);
 
+      const tid = toast.loading("Registrando en Monad...");
+      const start = Date.now();
       await api.join(token, group.id, {
         nonce,
         signature
       });
-
-      toast.success("¡Te uniste al grupo con éxito!");
+      const end = Date.now();
+      
+      toast.success(`¡Te uniste en ${(end-start)/1000}s! ⚡️`, { id: tid });
       onSuccess();
     } catch (err: any) {
       setError(err.message);
+      toast.dismiss();
     } finally {
       setLoading(false);
     }
@@ -222,10 +240,22 @@ function DepositForm({ onSubmit, error, loading }: { onSubmit: (a: number) => vo
               fontFamily: "inherit",
               fontSize: "1rem"
             }} 
-            onClick={() => onSubmit(Number(amount))} 
+            onClick={() => {
+              window.open("https://www.mercadopago.com.ar", "_blank");
+              onSubmit(Number(amount));
+            }} 
             disabled={loading}
           >
             {loading ? "Procesando el pago..." : "Pagar con Mercado Pago"}
+          </button>
+
+          <button 
+            className="btn-primary"
+            style={{ width: "100%", marginTop: "8px" }}
+            onClick={() => onSubmit(Number(amount))} 
+            disabled={loading}
+          >
+            {loading ? "Cargando..." : "Simular depósito de prueba"}
           </button>
         </div>
       )}
