@@ -7,7 +7,7 @@ export default function LoginScreen() {
     <div className="login-screen">
       <img src="/icon.png" alt="Logo" style={{ width: 80, height: 80, marginBottom: 24, borderRadius: 20 }} />
       <h1>Fondo Común</h1>
-      <p>Ahorra y gestiona fondos con amigos de forma segura en la blockchain de Monad.</p>
+      <p>Ahorra y gestiona fondos con amigos de forma segura, rápida y transparente.</p>
       
       <button className="google-btn" onClick={login}>
         {/* Usamos un ícono SVG nativo para el logo de Google por simplicidad */}
@@ -21,7 +21,7 @@ export default function LoginScreen() {
       </button>
       
       <div style={{ marginTop: 24, fontSize: "0.85rem", opacity: 0.7 }}>
-        Powered by Privy & Monad
+        Pagos seguros y al instante
       </div>
     </div>
   );
