@@ -123,4 +123,14 @@ export class GroupsService {
     await this.repo.delete(id);
     return { success: true };
   }
+
+  async updateName(id: string, userId: string, name: string) {
+    const group = await this.repo.findOne({ where: { id } });
+    if (!group) throw new Error("Grupo no encontrado");
+    if (group.creatorUserId !== userId) throw new Error("Solo el creador puede editar el grupo");
+    
+    group.name = name;
+    await this.repo.save(group);
+    return group;
+  }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Patch, Req, UseGuards } from "@nestjs/common";
 import { GroupsService } from "./groups.service";
 import { RelayerService } from "../relayer/relayer.service";
 import { UsersService } from "../users/users.service";
@@ -244,5 +244,11 @@ export class GroupsController {
   async deleteGroup(@Req() req: any, @Param("id") groupId: string) {
     const user = await this.currentUser(req);
     return this.groups.remove(groupId, user.id);
+  }
+
+  @Patch(":id")
+  async updateGroup(@Req() req: any, @Param("id") groupId: string, @Body() body: { name: string }) {
+    const user = await this.currentUser(req);
+    return this.groups.updateName(groupId, user.id, body.name);
   }
 }

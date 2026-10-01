@@ -12,7 +12,7 @@ interface AprobacionesTabProps {
 
 const fmt = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 
-export default function AprobacionesTab({ group, userAddress, onApprove, onReject }: AprobacionesTabProps) {
+export default function AprobacionesTab({ group, userAddress, onApprove, onReject, onApproveLimit, onRejectLimit }: AprobacionesTabProps) {
   if (!group) return <div className="text-center text-muted" style={{ padding: "40px 20px" }}>Selecciona un grupo para ver sus aprobaciones pendientes.</div>;
 
   const pendingTxs = group.pending || [];

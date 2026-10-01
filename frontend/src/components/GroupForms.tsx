@@ -200,11 +200,11 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
         nonce: Number(nonce)
       };
 
-      const signature = await signTyped(embeddedWallet, "proposeLimit", message);
+      const signature = await signTyped(embeddedWallet, "ProposeLimit", group.contractAddress, message);
 
       tid = toast.loading("Procesando propuesta de límite...");
       const start = Date.now();
-      await api.proposeLimit(token, group.id, {
+      await api.proposeLimitChange(token, group.id, {
         newLimit: message.newLimit,
         nonce,
         signature

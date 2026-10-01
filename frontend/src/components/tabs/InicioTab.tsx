@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Group } from "../../types";
-import { Plus, Wallet, FileText, Users, ShareNetwork, CaretDown, Trash } from "@phosphor-icons/react";
+import { Plus, Wallet, FileText, Users, ShareNetwork, CaretDown, Trash, PencilSimple } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import Sheet from "../Sheet";
 interface InicioTabProps {
@@ -11,18 +11,19 @@ interface InicioTabProps {
   onGroupClick: (id: string) => void;
   onNewGroup: () => void;
   onDeposit: () => void;
-  onDeposit: () => void;
   onSpend: () => void;
   onProposeLimit: () => void;
   onDeleteGroup: (id: string) => void;
+  onRenameGroup: (id: string, newName: string) => void;
 }
 
 const fmt = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 
-export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend, onProposeLimit, onDeleteGroup }: InicioTabProps) {
+export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend, onProposeLimit, onDeleteGroup, onRenameGroup }: InicioTabProps) {
   const activeGroup = groups.find((g) => g.id === activeGroupId);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
+  const [groupToRename, setGroupToRename] = useState<Group | null>(null);
 
   const handleShare = (e: React.MouseEvent, groupId: string) => {
     e.stopPropagation();
@@ -83,36 +84,6 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
           </div>
         </div>
 
-        <Sheet isOpen={!!groupToDelete} onClose={() => setGroupToDelete(null)} title="Eliminar grupo">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <p style={{ color: 'var(--text-muted)' }}>
-              ¿Estás seguro que deseas eliminar el grupo <strong>{groupToDelete?.name}</strong>?
-            </p>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>
-              Esta acción no se puede deshacer y todos los miembros perderán el acceso.
-            </p>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-              <button 
-                onClick={() => setGroupToDelete(null)}
-                style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--card-bg)', color: 'var(--text-color)', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={() => {
-                  if (groupToDelete) {
-                    onDeleteGroup(groupToDelete.id);
-                    setGroupToDelete(null);
-                  }
-                }}
-                style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#ff4444', color: 'white', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </Sheet>
-
         {activeGroup ? (
           <div className="balance-section">
             <div className="balance-label">Fondo disponible</div>
@@ -168,7 +139,21 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
             <div className="group-list-item" key={g.id} onClick={() => onGroupClick(g.id)}>
               <div className="group-avatar">{g.name.substring(0, 2).toUpperCase()}</div>
               <div className="group-info">
-                <div className="group-name">{g.name}</div>
+                <div className="group-name" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  {g.name}
+                  {g.isCreator && (
+                    <PencilSimple 
+                      size={16} 
+                      weight="bold" 
+                      color="var(--primary)" 
+                      style={{ cursor: "pointer" }} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGroupToRename(g);
+                      }}
+                    />
+                  )}
+                </div>
                 <div className="group-meta">{g.members?.length || 1} de {g.members?.length || 1} miembros</div>
               </div>
               <div className="group-balance">{fmt(Number(g.balance || 0) * 1000)}</div>
@@ -195,6 +180,78 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
           )}
         </div>
       </div>
+
+      {/* Modals */}
+      <Sheet isOpen={!!groupToDelete} onClose={() => setGroupToDelete(null)} title="Eliminar grupo">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <p style={{ color: 'var(--text-muted)' }}>
+            ¿Estás seguro que deseas eliminar el grupo <strong>{groupToDelete?.name}</strong>?
+          </p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>
+            Esta acción no se puede deshacer y todos los miembros perderán el acceso.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+            <button 
+              onClick={() => setGroupToDelete(null)}
+              style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text-main)', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={() => {
+                if (groupToDelete) {
+                  onDeleteGroup(groupToDelete.id);
+                  setGroupToDelete(null);
+                }
+              }}
+              style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#ff4444', color: 'white', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </Sheet>
+
+      <Sheet isOpen={!!groupToRename} onClose={() => setGroupToRename(null)} title="Editar nombre de grupo">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '8px' }}>
+          <p style={{ color: "var(--text-muted)", marginBottom: "0px", marginTop: "-16px" }}>
+            Ingresa el nuevo nombre que deseas asignarle a este grupo.
+          </p>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Nuevo nombre del grupo</label>
+            <input 
+              type="text" 
+              id="rename-input"
+              className="form-input" 
+              defaultValue={groupToRename?.name}
+              placeholder="Ej. Vacaciones Mdz"
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button 
+              className="btn-outline"
+              style={{ flex: 1 }}
+              onClick={() => setGroupToRename(null)}
+            >
+              Cancelar
+            </button>
+            <button 
+              className="btn-primary"
+              style={{ flex: 1 }}
+              onClick={() => {
+                const input = document.getElementById("rename-input") as HTMLInputElement;
+                const newName = input?.value;
+                if (groupToRename && newName && newName.trim() && newName.trim() !== groupToRename.name) {
+                  onRenameGroup(groupToRename.id, newName.trim());
+                  setGroupToRename(null);
+                }
+              }}
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      </Sheet>
     </div>
   );
 }

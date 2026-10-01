@@ -46,7 +46,7 @@ export const api = {
   vote: (token: string, groupId: string, body: { txId: number; approve: boolean; nonce: string; signature: string }) =>
     request(`/groups/${groupId}/vote`, token, { method: "POST", body: JSON.stringify(body) }),
 
-  proposeLimitChange: (token: string, groupId: string, body: { newLimit: number; nonce: string; signature: string }) =>
+  proposeLimitChange: (token: string, groupId: string, body: { newLimit: string; nonce: string; signature: string }) =>
     request(`/groups/${groupId}/limit-proposal`, token, { method: "POST", body: JSON.stringify(body) }),
 
   voteLimitChange: (token: string, groupId: string, body: { proposalId: number; approve: boolean; nonce: string; signature: string }) =>
@@ -54,4 +54,7 @@ export const api = {
 
   deleteGroup: (token: string, groupId: string) =>
     request(`/groups/${groupId}`, token, { method: "DELETE" }),
+
+  updateGroup: (token: string, groupId: string, body: { name: string }) =>
+    request(`/groups/${groupId}`, token, { method: "PATCH", body: JSON.stringify(body) }),
 };

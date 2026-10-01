@@ -292,6 +292,19 @@ export default function UserDashboard() {
     }
   };
 
+  const handleRenameGroup = async (groupId: string, newName: string) => {
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+      const tid = toast.loading("Actualizando nombre...");
+      await api.updateGroup(token, groupId, { name: newName });
+      toast.success("Nombre actualizado", { id: tid });
+      loadData();
+    } catch (err: any) {
+      toast.error("Error al actualizar: " + err.message);
+    }
+  };
+
   return (
     <div className="app-container">
       <div className="main-content">
@@ -307,6 +320,7 @@ export default function UserDashboard() {
             onSpend={() => setSheetView("spend")}
             onProposeLimit={() => setSheetView("propose_limit")}
             onDeleteGroup={handleDeleteGroup}
+            onRenameGroup={handleRenameGroup}
           />
         )}
         {activeTab === "movimientos" && (
