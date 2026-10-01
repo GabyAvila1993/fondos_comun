@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import type { UserStats } from "../../types";
 import { User, Bell, IdentificationCard, CreditCard, Password, ChatCircle, CaretRight, PencilSimple } from "@phosphor-icons/react";
 
@@ -77,7 +78,7 @@ export default function MiCuentaTab({ userAddress, userEmail, stats, onLogout }:
           </div>
           
           <div className="card" style={{ padding: "0 16px", margin: "0" }}>
-            <div className="settings-item" onClick={() => alert("Próximamente")}>
+            <div className="settings-item" onClick={() => toast("Próximamente", { icon: "🚧" })}>
               <div className="settings-icon"><Bell /></div>
               <div className="settings-text">
                 <div className="settings-title">Notificaciones de votación</div>
@@ -85,7 +86,7 @@ export default function MiCuentaTab({ userAddress, userEmail, stats, onLogout }:
               </div>
               <CaretRight color="var(--text-muted)" />
             </div>
-            <div className="settings-item" onClick={() => alert("Próximamente")}>
+            <div className="settings-item" onClick={() => toast("Próximamente", { icon: "🚧" })}>
               <div className="settings-icon"><IdentificationCard /></div>
               <div className="settings-text">
                 <div className="settings-title">Miembros y permisos</div>
@@ -93,7 +94,7 @@ export default function MiCuentaTab({ userAddress, userEmail, stats, onLogout }:
               </div>
               <CaretRight color="var(--text-muted)" />
             </div>
-            <div className="settings-item" onClick={() => alert("Próximamente")}>
+            <div className="settings-item" onClick={() => toast("Próximamente", { icon: "🚧" })}>
               <div className="settings-icon"><CreditCard /></div>
               <div className="settings-text">
                 <div className="settings-title">Métodos de carga</div>
@@ -108,7 +109,7 @@ export default function MiCuentaTab({ userAddress, userEmail, stats, onLogout }:
           </div>
           
           <div className="card" style={{ padding: "0 16px", margin: "0" }}>
-            <div className="settings-item" onClick={() => alert("Próximamente")}>
+            <div className="settings-item" onClick={() => toast("Próximamente", { icon: "🚧" })}>
               <div className="settings-icon"><Password /></div>
               <div className="settings-text">
                 <div className="settings-title">PIN de Aprobación</div>

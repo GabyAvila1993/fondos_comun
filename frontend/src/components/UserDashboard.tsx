@@ -88,7 +88,7 @@ export default function UserDashboard() {
         // Let's check if the user is already in this group
         const existing = fullGroups.find(g => g.id === joinId);
         if (existing) {
-          alert("Ya eres miembro de este grupo.");
+          toast("Ya eres miembro de este grupo.", { icon: "ℹ️" });
           setActiveGroupId(existing.id);
         } else {
           // Fetch group info from backend
