@@ -91,7 +91,19 @@ export class RelayerService {
 
   // ---------- Depósitos (fiat -> USDC onchain) ----------
   async depositFiatAsOnchain(groupAddress: string, fiatAmount: number) {
-    const rate = Number(process.env.DEMO_FIAT_TO_USD_RATE || "1"); // pesos -> USD (tasa demo)
+    let rate = Number(process.env.DEMO_FIAT_TO_USD_RATE || "0.001");
+    try {
+      const resp = await fetch("https://dolarapi.com/v1/dolares/cripto");
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.venta) {
+          rate = 1 / data.venta;
+        }
+      }
+    } catch (e) {
+      this.logger.error("Error al obtener cotización Dolar Cripto, usando fallback", e);
+    }
+
     const usdAmount = fiatAmount * rate;
     const amountUnits = ethers.parseUnits(usdAmount.toFixed(USDC_DECIMALS), USDC_DECIMALS);
 
@@ -133,17 +145,43 @@ export class RelayerService {
     const fmt = (v: bigint) => ethers.formatUnits(v, USDC_DECIMALS);
     const transactions = [];
     for (let i = 0; i < Number(total); i++) {
-      const t = await contract.getTransaction(i);
-      transactions.push({
+      try {
+        const t = await contract.getTransaction(i);
+        transactions.push({
+          id: i,
+          proposer: t.proposer,
+          amount: fmt(t.amount),
+          desc: t.description,
+          executed: t.executed,
+          rejected: t.rejected,
+          votesFor: Number(t.votesFor),
+          votesAgainst: Number(t.votesAgainst),
+          createdAt: t.createdAt ? Number(t.createdAt) * 1000 : 0,
+        });
+      } catch (e) {
+        console.warn(`Could not fetch transaction ${i} for ${groupAddress} (might be an old contract format)`);
+      }
+    }
+
+    let limitProposalCount = 0n;
+    try {
+      limitProposalCount = await contract.limitProposalCount();
+    } catch (e) {
+      console.warn(`Contract does not support limitProposalCount: ${groupAddress}`);
+    }
+
+    const limitProposals = [];
+    for (let i = 0; i < Number(limitProposalCount); i++) {
+      const p = await contract.getLimitProposal(i);
+      limitProposals.push({
         id: i,
-        proposer: t.proposer,
-        amount: fmt(t.amount),
-        desc: t.description,
-        executed: t.executed,
-        rejected: t.rejected,
-        votesFor: Number(t.votesFor),
-        votesAgainst: Number(t.votesAgainst),
-        createdAt: Number(t.createdAt) * 1000,
+        proposer: p[0],
+        newLimit: fmt(p[1]),
+        executed: p[2],
+        rejected: p[3],
+        votesFor: Number(p[4]),
+        votesAgainst: Number(p[5]),
+        createdAt: Number(p[6]) * 1000,
       });
     }
 
@@ -155,6 +193,8 @@ export class RelayerService {
       balance: fmt(bal),
       transactions: transactions.reverse(),
       pending: transactions.filter((t) => !t.executed && !t.rejected),
+      limitProposals: limitProposals.reverse(),
+      pendingLimitProposals: limitProposals.filter((p) => !p.executed && !p.rejected),
     };
   }
 
@@ -194,6 +234,18 @@ export class RelayerService {
   async vote(groupAddress: string, voterAddress: string, txId: number, approve: boolean, nonce: bigint, signature: string) {
     const contract = this.groupContract(groupAddress);
     const tx = await contract.voteFor(voterAddress, txId, approve, nonce, signature);
+    return tx.wait();
+  }
+
+  async proposeLimitChange(groupAddress: string, proposer: string, newLimitFiat: number, nonce: bigint, signature: string) {
+    const contract = this.groupContract(groupAddress);
+    const tx = await contract.proposeLimitChangeFor(proposer, ethers.parseUnits(newLimitFiat.toString(), USDC_DECIMALS), nonce, signature);
+    return tx.wait();
+  }
+
+  async voteLimitChange(groupAddress: string, voterAddress: string, proposalId: number, approve: boolean, nonce: bigint, signature: string) {
+    const contract = this.groupContract(groupAddress);
+    const tx = await contract.voteLimitChangeFor(voterAddress, proposalId, approve, nonce, signature);
     return tx.wait();
   }
 }

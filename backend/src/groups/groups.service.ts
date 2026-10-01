@@ -111,4 +111,16 @@ export class GroupsService {
   async getDepositsForGroup(groupId: string) {
     return this.depositRepo.find({ where: { groupId }, order: { createdAt: "DESC" } });
   }
+
+  async remove(id: string, userId: string) {
+    const group = await this.repo.findOne({ where: { id } });
+    if (!group) throw new Error("Grupo no encontrado");
+    if (group.creatorUserId !== userId) throw new Error("Solo el creador puede eliminar el grupo");
+    
+    // Eliminar depósitos asociados primero
+    await this.depositRepo.delete({ groupId: id });
+    // Eliminar grupo
+    await this.repo.delete(id);
+    return { success: true };
+  }
 }

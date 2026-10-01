@@ -55,7 +55,7 @@ export default function UnirseTab({ onJoinInit }: UnirseTabProps) {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Ej: http://localhost:5173/?join=..."
+            placeholder="Ej: https://fondos-comun-front.onrender.com/?join= ..."
             className="unirse-input"
           />
         </div>

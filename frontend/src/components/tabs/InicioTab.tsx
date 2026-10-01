@@ -1,22 +1,28 @@
 import { useState } from "react";
 import type { Group } from "../../types";
-import { Plus, Wallet, FileText, Users, ShareNetwork, CaretDown } from "@phosphor-icons/react";
+import { Plus, Wallet, FileText, Users, ShareNetwork, CaretDown, Trash } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
+import Sheet from "../Sheet";
 interface InicioTabProps {
   groups: Group[];
   activeGroupId: string;
+  userId?: string;
   onSelectGroup: (id: string) => void;
   onGroupClick: (id: string) => void;
   onNewGroup: () => void;
   onDeposit: () => void;
+  onDeposit: () => void;
   onSpend: () => void;
+  onProposeLimit: () => void;
+  onDeleteGroup: (id: string) => void;
 }
 
 const fmt = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 
-export default function InicioTab({ groups, activeGroupId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend }: InicioTabProps) {
+export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend, onProposeLimit, onDeleteGroup }: InicioTabProps) {
   const activeGroup = groups.find((g) => g.id === activeGroupId);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
 
   const handleShare = (e: React.MouseEvent, groupId: string) => {
     e.stopPropagation();
@@ -42,6 +48,7 @@ export default function InicioTab({ groups, activeGroupId, onSelectGroup, onGrou
               {activeGroup ? activeGroup.name : "Seleccionar grupo"}
               <CaretDown weight="bold" />
             </button>
+
             
             {isDropdownOpen && (
               <div className="custom-dropdown-menu">
@@ -49,12 +56,26 @@ export default function InicioTab({ groups, activeGroupId, onSelectGroup, onGrou
                   <div 
                     key={g.id} 
                     className="custom-dropdown-item"
-                    onClick={() => {
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
+                    <span onClick={() => {
                       onSelectGroup(g.id);
                       setIsDropdownOpen(false);
-                    }}
-                  >
-                    {g.name}
+                    }} style={{ flexGrow: 1 }}>{g.name}</span>
+                    
+                    {g.isCreator && (
+                      <Trash 
+                        weight="fill" 
+                        size={20} 
+                        color="#ff4444" 
+                        style={{ cursor: 'pointer', paddingLeft: '8px' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGroupToDelete(g);
+                          setIsDropdownOpen(false);
+                        }} 
+                      />
+                    )}
                   </div>
                 ))}
               </div>
@@ -62,12 +83,50 @@ export default function InicioTab({ groups, activeGroupId, onSelectGroup, onGrou
           </div>
         </div>
 
+        <Sheet isOpen={!!groupToDelete} onClose={() => setGroupToDelete(null)} title="Eliminar grupo">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p style={{ color: 'var(--text-muted)' }}>
+              ¿Estás seguro que deseas eliminar el grupo <strong>{groupToDelete?.name}</strong>?
+            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>
+              Esta acción no se puede deshacer y todos los miembros perderán el acceso.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+              <button 
+                onClick={() => setGroupToDelete(null)}
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--card-bg)', color: 'var(--text-color)', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  if (groupToDelete) {
+                    onDeleteGroup(groupToDelete.id);
+                    setGroupToDelete(null);
+                  }
+                }}
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#ff4444', color: 'white', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </Sheet>
+
         {activeGroup ? (
           <div className="balance-section">
             <div className="balance-label">Fondo disponible</div>
             <div className="balance-amount">{fmt(Number(activeGroup.balance || 0) * 1000)}</div>
-            <div className="limit-info mt-2">
-              Límite libre por persona: <span style={{ fontWeight: 600 }}>{fmt(Number(activeGroup.creditLimit) * 1000)}</span>
+            <div className="limit-info mt-2" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+              <span>Límite libre por persona: <span style={{ fontWeight: 600 }}>{fmt(Number(activeGroup.creditLimit) * 1000)}</span></span>
+              {activeGroup.isCreator && (
+                <button 
+                  onClick={onProposeLimit}
+                  style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", padding: "2px 8px", borderRadius: "12px", fontSize: "0.75rem", color: "white", cursor: "pointer" }}
+                >
+                  Cambiar
+                </button>
+              )}
             </div>
           </div>
         ) : (

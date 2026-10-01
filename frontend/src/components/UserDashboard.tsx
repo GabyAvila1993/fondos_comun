@@ -26,13 +26,21 @@ export default function UserDashboard() {
   const [forceGlobal, setForceGlobal] = useState(false);
 
   // UI State
-  const [sheetView, setSheetView] = useState<"new_group" | "deposit" | "spend" | "join_group" | null>(null);
+  const [sheetView, setSheetView] = useState<"new_group" | "deposit" | "spend" | "join_group" | "propose_limit" | null>(null);
   const [joinGroupData, setJoinGroupData] = useState<Group | undefined>(undefined);
 
   useEffect(() => {
     if (user) {
       loadData();
     }
+    
+    const handleRefresh = () => {
+      loadData();
+    };
+    window.addEventListener("group_deleted_refresh", handleRefresh);
+    return () => {
+      window.removeEventListener("group_deleted_refresh", handleRefresh);
+    };
   }, [user]);
 
   const loadData = async () => {
@@ -44,7 +52,14 @@ export default function UserDashboard() {
       
       // Fetch full state for each group (balance, txs, pending, etc)
       const fullGroups = await Promise.all(
-        basicGroups.map((g) => api.getGroup(token, g.id).catch(() => g))
+        basicGroups.map(async (g) => {
+          try {
+            const full = await api.getGroup(token, g.id);
+            return { ...g, ...full, isCreator: g.isCreator };
+          } catch {
+            return g;
+          }
+        })
       );
       
       setGroups(fullGroups);
@@ -187,6 +202,96 @@ export default function UserDashboard() {
     }
   };
 
+  const handleApproveLimit = async (proposalId: number) => {
+    if (!activeGroup) return;
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+
+      const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+      if (!embeddedWallet) throw new Error("Wallet no encontrada");
+
+      const { nonce } = await api.getNonce(token, activeGroup.id);
+      
+      const message = {
+        voter: user?.wallet?.address,
+        id: proposalId,
+        approve: true,
+        nonce: parseInt(nonce, 10)
+      };
+
+      const signature = await signTyped(embeddedWallet, "VoteLimit", activeGroup.contractAddress, message);
+
+      const tid = toast.loading("Aprobando cambio de límite...");
+      const start = Date.now();
+      await api.voteLimitChange(token, activeGroup.id, {
+        proposalId,
+        approve: true,
+        nonce,
+        signature
+      });
+      const end = Date.now();
+
+      toast.success(`¡Cambio de límite aprobado en ${(end-start)/1000}s! ⚡️`, { id: tid });
+      loadData();
+    } catch (err: any) {
+      toast.error("Error al aprobar: " + err.message);
+      toast.dismiss();
+    }
+  };
+
+  const handleRejectLimit = async (proposalId: number) => {
+    if (!activeGroup) return;
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+
+      const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+      if (!embeddedWallet) throw new Error("Wallet no encontrada");
+
+      const { nonce } = await api.getNonce(token, activeGroup.id);
+      
+      const message = {
+        voter: user?.wallet?.address,
+        id: proposalId,
+        approve: false,
+        nonce: parseInt(nonce, 10)
+      };
+
+      const signature = await signTyped(embeddedWallet, "VoteLimit", activeGroup.contractAddress, message);
+
+      const tid = toast.loading("Rechazando cambio de límite...");
+      const start = Date.now();
+      await api.voteLimitChange(token, activeGroup.id, {
+        proposalId,
+        approve: false,
+        nonce,
+        signature
+      });
+      const end = Date.now();
+
+      toast.success(`¡Cambio de límite rechazado en ${(end-start)/1000}s! ⚡️`, { id: tid });
+      loadData();
+    } catch (err: any) {
+      toast.error("Error al rechazar: " + err.message);
+      toast.dismiss();
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+      const tid = toast.loading("Eliminando grupo...");
+      await api.deleteGroup(token, groupId);
+      toast.success("Grupo eliminado", { id: tid });
+      if (activeGroupId === groupId) setActiveGroupId("");
+      loadData();
+    } catch (err: any) {
+      toast.error("Error al eliminar: " + err.message);
+    }
+  };
+
   return (
     <div className="app-container">
       <div className="main-content">
@@ -194,11 +299,14 @@ export default function UserDashboard() {
           <InicioTab 
             groups={groups} 
             activeGroupId={activeGroupId} 
+            userId={user?.id}
             onSelectGroup={setActiveGroupId}
             onGroupClick={(id) => { setActiveGroupId(id); setForceGlobal(false); setActiveTab("movimientos"); }}
             onNewGroup={() => setSheetView("new_group")}
             onDeposit={() => setSheetView("deposit")}
             onSpend={() => setSheetView("spend")}
+            onProposeLimit={() => setSheetView("propose_limit")}
+            onDeleteGroup={handleDeleteGroup}
           />
         )}
         {activeTab === "movimientos" && (
@@ -216,6 +324,8 @@ export default function UserDashboard() {
             userAddress={user?.wallet?.address || ""} 
             onApprove={handleApprove}
             onReject={handleReject}
+            onApproveLimit={handleApproveLimit}
+            onRejectLimit={handleRejectLimit}
           />
         )}
         {activeTab === "perfil" && (
@@ -233,7 +343,8 @@ export default function UserDashboard() {
       <Sheet isOpen={!!sheetView} onClose={() => { setSheetView(null); setJoinGroupData(undefined); }} title={
         sheetView === "new_group" ? "Crear Nuevo Grupo" : 
         sheetView === "deposit" ? "Ingresar Dinero" : 
-        sheetView === "join_group" ? "Unirse al Grupo" : "Solicitar Gasto"
+        sheetView === "join_group" ? "Unirse al Grupo" : 
+        sheetView === "propose_limit" ? "Proponer Nuevo Límite" : "Solicitar Gasto"
       }>
         <GroupForms 
           type={sheetView!} 

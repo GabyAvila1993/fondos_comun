@@ -1,60 +1,58 @@
-# 🚀 Fondo Común en Monad
+# Fondo Común (Monad)
 
-¡Bienvenido a **Fondo Común**! La plataforma definitiva de finanzas sociales colaborativas impulsada por la altísima velocidad y seguridad de **Monad**.
+Fondo Común es una aplicación web diseñada para resolver un problema cotidiano: juntar dinero entre varias personas de manera segura y transparente. 
 
-Fondo Común elimina la fricción de organizar viajes, eventos o fondos familiares. Reemplazamos la necesidad de una cuenta bancaria centralizada (donde una sola persona tiene todo el riesgo y control) por un sistema transparente basado en **Contratos Inteligentes**, en el que todos los miembros deciden y auditan los gastos.
+Ya sea para organizar un viaje entre amigos, un asado el fin de semana o manejar los gastos de una oficina, lo normal es que una sola persona reciba todo el dinero en su cuenta bancaria. Esto suele generar dudas, falta de transparencia (los demás no saben cuánto hay ni en qué se gastó exactamente) y le pone toda la responsabilidad a esa única persona.
 
-## ✨ Características Principales
+Esta aplicación soluciona el problema usando contratos inteligentes en la red Monad. El dinero no lo tiene una persona, sino un contrato inmutable donde todos los miembros del grupo pueden ver el saldo, proponer gastos y votar si aprueban o rechazan el uso de los fondos.
 
-- **Velocidad Extrema (El Efecto Wow):** Aprovechando la finalidad casi instantánea de Monad, los depósitos, creaciones de grupos y votaciones tardan fracciones de segundo. La red es tan rápida que casi no notarás que estás usando una blockchain.
-- **Fricción Cero con Web3:** Integramos **Privy** para que cualquier usuario, sin necesidad de conocimientos previos sobre criptomonedas o billeteras, pueda unirse usando simplemente su cuenta de Google o Apple.
-- **Transacciones Sin Gas para el Usuario:** Gracias a nuestro modelo **Relayer** (Meta-transacciones mediante EIP-712), nuestro servidor asume los costos transaccionales. Los usuarios solo "firman" su intención con un clic, eliminando la barrera de entrada.
-- **Consenso Social Seguro:** Nadie puede retirar dinero de forma arbitraria. Cada egreso es una "solicitud de gasto" que debe ser votada y aprobada por los miembros del grupo.
-- **Notificaciones en Tiempo Real:** Interfaz viva mediante WebSockets. Los nuevos depósitos o gastos se actualizan en pantalla automáticamente.
+## ¿Cómo funciona?
 
-## 🛠️ Arquitectura Técnica
+### 1. Dinero Estable (USDC)
+Para evitar la volatilidad de las criptomonedas (no queremos que el fondo para las pizzas valga un 20% menos al día siguiente), el contrato maneja los saldos en **USDC**, una moneda que mantiene paridad con el dólar. 
 
-- **Blockchain:** Monad Testnet (Alto Rendimiento)
-- **Contratos Inteligentes:** Solidity (Gestión descentralizada de fondos)
-- **Autenticación y Wallets:** Privy (Embedded Wallets)
-- **Frontend:** React + Vite (UX Moderna e instantánea)
-- **Backend:** NestJS + PostgreSQL + WebSockets + Ethers.js (Actúa como API, Notificador en tiempo real y Relayer)
+### 2. Cero barreras técnicas (El Relayer)
+Para que cualquier persona pueda usar la aplicación sin saber qué es la blockchain, usamos un sistema de billeteras invisibles (vía Privy) y un backend que actúa como **Relayer**. 
+El usuario solo inicia sesión con su correo. Cuando quiere depositar, proponer un gasto o votar, simplemente "firma" una orden. El backend toma esa orden y paga el costo de la transacción (gas) en la red Monad. El usuario final vive una experiencia idéntica a una app tradicional, pero respaldada por la seguridad de la blockchain.
 
-## 🚀 Correr el Proyecto Localmente
+### 3. Votaciones Dinámicas
+El sistema protege el dinero mediante reglas estrictas de votación, que varían según el tamaño del grupo:
+- **1 persona:** Se aprueba todo automáticamente.
+- **2 personas:** Se necesita 1 voto (el de la persona que no propuso el gasto).
+- **3 o más personas:** Se requiere mayoría de votos. Quien pide el dinero no puede votar por su propio pedido.
 
-Si deseas probar el proyecto completo (Frontend + Backend) en tu máquina local, sigue estos pasos:
+### 4. Tiempo Real
+El frontend está conectado al backend mediante WebSockets. Cuando alguien vota o se hace un movimiento de dinero, todos los miembros del grupo ven el impacto en pantalla al instante, sin recargar la página.
 
-### 1. Clonar el Repositorio
-```bash
-git clone https://github.com/tu-usuario/fondo-comun-monad.git
-cd fondo-comun-monad
-```
+## Roles del Grupo
+- **Administrador (Creador):** Es quien arma el grupo y define el límite de crédito general y diario inicial. 
+- **Invitado:** Se une al grupo mediante invitación, aporta dinero y puede solicitar o votar gastos, al igual que el administrador.
 
-### 2. Levantar el Backend (NestJS)
-El backend requiere una base de datos PostgreSQL local y acceso a Privy y a Monad RPC.
+## Tecnologías Utilizadas
+- **Blockchain:** Monad Testnet
+- **Contratos:** Solidity
+- **Frontend:** React + Vite
+- **Backend:** NestJS + PostgreSQL + WebSockets + Ethers.js
+- **Autenticación:** Privy (Embedded Wallets)
 
+## Cómo correr el proyecto localmente
+
+### Backend (NestJS)
+Necesitas una base de datos PostgreSQL y las credenciales de Privy y Monad RPC.
 ```bash
 cd backend
 npm install
-
-# Configura tus variables de entorno (.env) usando .env.example como base
-# Necesitarás tu PRIVY_APP_ID, PRIVY_APP_SECRET, RPC de Monad y tu Private Key del Relayer.
+# Completar el archivo .env basándote en .env.example
 npm run start:dev
 ```
-El servidor backend estará corriendo en `http://localhost:3000`.
+El servidor escuchará en `http://localhost:3000`.
 
-### 3. Levantar el Frontend (React/Vite)
-Abre otra pestaña en tu terminal y corre:
-
+### Frontend (React/Vite)
+Abre otra terminal:
 ```bash
 cd frontend
 npm install
-
-# Configura el .env local con tus variables VITE_PRIVY_APP_ID y VITE_API_URL
+# Completar el .env con VITE_PRIVY_APP_ID y VITE_API_URL
 npm run dev
 ```
-La aplicación web estará lista en `http://localhost:5173`.
-
----
-
-*Fondo Común es un proyecto desarrollado orgullosamente para el **Monad Metropolis Hackathon** (Track: Consumer Products & Payments).*
+La aplicación estará en `http://localhost:5173`.

@@ -8,8 +8,12 @@ export interface Group {
   balance?: string;
   transactions?: Tx[];
   pending?: Tx[];
+  limitProposals?: LimitProposal[];
+  pendingLimitProposals?: LimitProposal[];
   members?: string[];
   deposits?: Deposit[];
+  creatorUserId?: string;
+  isCreator?: boolean;
 }
 
 export interface Deposit {
@@ -35,4 +39,15 @@ export interface Tx {
 export interface UserStats {
   totalDeposited: string;
   groupsCount: number;
+}
+
+export interface LimitProposal {
+  id: number;
+  proposer: string;
+  newLimit: string;
+  executed: boolean;
+  rejected: boolean;
+  votesFor: number;
+  votesAgainst: number;
+  createdAt: number;
 }

@@ -38,7 +38,8 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
           avatar: uName.substring(0,2).toUpperCase(),
           desc: "Ingreso de dinero",
           amount: dep.amount,
-          timestamp: isNaN(parsedTime) ? Date.now() : parsedTime
+          timestamp: isNaN(parsedTime) ? Date.now() : parsedTime,
+          status: "Completado"
         };
       });
 
@@ -62,7 +63,8 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
           desc: tx.desc || "Gasto general",
           amount: Number(tx.amount) * 1000,
           // Usamos baseTime para intercalar los gastos con los depósitos correctamente
-          timestamp: baseTime - ((g.transactions?.length || 0) - idx) * 60000 
+          timestamp: baseTime - ((g.transactions?.length || 0) - idx) * 60000,
+          status: tx.executed ? "Completado" : (tx.rejected ? "Rechazado" : "Pendiente")
         };
       });
       list.push(...expenses, ...deposits);
@@ -123,7 +125,9 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
                   <div className={`tx-amount ${item.type === "out" ? "negative" : "positive"}`} style={{ color: item.type === "in" ? "var(--primary)" : "inherit" }}>
                     {item.type === "out" ? "- " : "+ "}{fmt(item.amount)}
                   </div>
-                  <div className="tx-date">{item.type === "in" ? "Completado" : "Aprobado"}</div>
+                  <div className="tx-date" style={{ color: item.status === "Pendiente" ? "orange" : item.status === "Rechazado" ? "red" : "var(--text-muted)" }}>
+                    {item.status}
+                  </div>
                 </div>
               </div>
             ))}
@@ -169,7 +173,9 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
                       <div className={`tx-amount ${item.type === "out" ? "negative" : "positive"}`} style={{ color: item.type === "in" ? "var(--primary)" : "inherit" }}>
                         {item.type === "out" ? "- " : "+ "}{fmt(item.amount)}
                       </div>
-                      <div className="tx-date">{item.type === "in" ? "Completado" : "Aprobado"}</div>
+                      <div className="tx-date" style={{ color: item.status === "Pendiente" ? "orange" : item.status === "Rechazado" ? "red" : "var(--text-muted)" }}>
+                        {item.status}
+                      </div>
                     </div>
                   </div>
                 ))}

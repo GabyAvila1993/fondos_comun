@@ -38,6 +38,20 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
+    s.on("group_deleted", (data) => {
+      toast(data.message, {
+        icon: "🗑️",
+        style: {
+          borderRadius: '10px',
+          background: 'var(--card-bg)',
+          color: '#ff4444',
+          border: '1px solid #ff4444',
+        },
+      });
+      // Emit a custom event so UserDashboard can reload data
+      window.dispatchEvent(new Event("group_deleted_refresh"));
+    });
+
     return () => {
       s.disconnect();
     };

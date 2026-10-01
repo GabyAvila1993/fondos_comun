@@ -44,8 +44,20 @@ contract SharedWallet {
         mapping(address => bool) voted;
     }
 
+    struct LimitProposal {
+        address proposer;
+        uint256 newLimit;
+        bool executed;
+        bool rejected;
+        uint256 votesFor;
+        uint256 votesAgainst;
+        uint256 createdAt;
+        mapping(address => bool) voted;
+    }
+
     string public name;
     IERC20 public immutable usdc;
+    address public admin;
     address[] public memberList;
     mapping(address => Member) public members;
 
@@ -67,9 +79,14 @@ contract SharedWallet {
         keccak256("Vote(address voter,uint256 txId,bool approve,uint256 nonce)");
     bytes32 public constant JOIN_TYPEHASH =
         keccak256("Join(address user,uint256 nonce)");
+    bytes32 public constant PROPOSE_LIMIT_TYPEHASH =
+        keccak256("ProposeLimit(address proposer,uint256 newLimit,uint256 nonce)");
+    bytes32 public constant VOTE_LIMIT_TYPEHASH =
+        keccak256("VoteLimit(address voter,uint256 id,bool approve,uint256 nonce)");
     bytes32 public immutable DOMAIN_SEPARATOR;
 
     Transaction[] private transactions;
+    LimitProposal[] private limitProposals;
 
     event Deposit(address indexed from, uint256 amount, uint256 newBalance);
     event ExpenseExecuted(uint256 indexed txId, address indexed user, uint256 amount, string desc, uint256 newBalance);
@@ -77,6 +94,9 @@ contract SharedWallet {
     event Voted(uint256 indexed txId, address indexed voter, bool approve, uint256 votesFor, uint256 votesAgainst);
     event ApprovalResolved(uint256 indexed txId, bool approved);
     event MemberAdded(address indexed member, bool isGuest);
+    event LimitChangeRequested(uint256 indexed id, address indexed proposer, uint256 newLimit, uint256 votesNeeded);
+    event LimitVoted(uint256 indexed id, address indexed voter, bool approve, uint256 votesFor, uint256 votesAgainst);
+    event LimitChangeResolved(uint256 indexed id, bool approved, uint256 newLimit);
 
     modifier onlyMember() {
         require(members[msg.sender].active, "No sos miembro de este fondo");
@@ -101,6 +121,9 @@ contract SharedWallet {
         dailyLimit = _dailyLimit;
         relayer = _relayer;
         usdc = IERC20(_usdc);
+        if (_members.length > 0) {
+            admin = _members[0];
+        }
         for (uint256 i = 0; i < _members.length; i++) {
             members[_members[i]] = Member(true, false);
             memberList.push(_members[i]);
@@ -139,7 +162,10 @@ contract SharedWallet {
     }
 
     function majorityNeeded() public view returns (uint256) {
-        return (memberList.length / 2) + 1;
+        uint256 m = memberList.length;
+        if (m <= 1) return 0;
+        if (m == 2) return 1;
+        return ((m - 1) / 2) + 1;
     }
 
     function memberCount() external view returns (uint256) {
@@ -176,6 +202,31 @@ contract SharedWallet {
         return transactions[id].voted[voter];
     }
 
+    function limitProposalCount() external view returns (uint256) {
+        return limitProposals.length;
+    }
+
+    function getLimitProposal(uint256 id)
+        external
+        view
+        returns (
+            address proposer,
+            uint256 newLimit,
+            bool executed,
+            bool rejected,
+            uint256 votesFor,
+            uint256 votesAgainst,
+            uint256 createdAt
+        )
+    {
+        LimitProposal storage p = limitProposals[id];
+        return (p.proposer, p.newLimit, p.executed, p.rejected, p.votesFor, p.votesAgainst, p.createdAt);
+    }
+
+    function hasVotedLimit(uint256 id, address voter) external view returns (bool) {
+        return limitProposals[id].voted[voter];
+    }
+
     /// @param forceApproval true = usa el botón "Solicitar aumento o compra superior"
     function requestExpense(uint256 amount, string calldata desc, bool forceApproval)
         external
@@ -187,6 +238,9 @@ contract SharedWallet {
 
         _resetIfNewDay(msg.sender);
         bool needsApproval = forceApproval || amount > creditLimit || txCountToday[msg.sender] >= dailyLimit;
+        if (majorityNeeded() == 0) {
+            needsApproval = false;
+        }
 
         transactions.push();
         id = transactions.length - 1;
@@ -301,6 +355,9 @@ contract SharedWallet {
 
         _resetIfNewDay(user);
         bool needsApproval = forceApproval || amount > creditLimit || txCountToday[user] >= dailyLimit;
+        if (majorityNeeded() == 0) {
+            needsApproval = false;
+        }
 
         transactions.push();
         id = transactions.length - 1;
@@ -348,6 +405,57 @@ contract SharedWallet {
         } else if (t.votesAgainst >= needed) {
             t.rejected = true;
             emit ApprovalResolved(id, false);
+        }
+    }
+
+    function proposeLimitChangeFor(address proposer, uint256 newLimit, uint256 nonce, bytes calldata signature) external onlyRelayer returns (uint256 id) {
+        require(nonce == nonces[proposer], "Nonce invalido");
+        require(proposer == admin, "Solo admin puede proponer");
+        require(newLimit > 0, "Limite invalido");
+
+        bytes32 structHash = keccak256(abi.encode(PROPOSE_LIMIT_TYPEHASH, proposer, newLimit, nonce));
+        require(_recoverSigner(_hashTypedData(structHash), signature) == proposer, "Firma invalida");
+        nonces[proposer] += 1;
+
+        limitProposals.push();
+        id = limitProposals.length - 1;
+        LimitProposal storage p = limitProposals[id];
+        p.proposer = proposer;
+        p.newLimit = newLimit;
+        p.createdAt = block.timestamp;
+        
+        if (majorityNeeded() == 0) {
+            p.executed = true;
+            creditLimit = newLimit;
+            emit LimitChangeResolved(id, true, newLimit);
+        } else {
+            emit LimitChangeRequested(id, proposer, newLimit, majorityNeeded());
+        }
+    }
+
+    function voteLimitChangeFor(address voter, uint256 id, bool approve, uint256 nonce, bytes calldata signature) external onlyRelayer {
+        require(nonce == nonces[voter], "Nonce invalido");
+        bytes32 structHash = keccak256(abi.encode(VOTE_LIMIT_TYPEHASH, voter, id, approve, nonce));
+        require(_recoverSigner(_hashTypedData(structHash), signature) == voter, "Firma invalida");
+        nonces[voter] += 1;
+
+        LimitProposal storage p = limitProposals[id];
+        require(!p.executed && !p.rejected, "Ya fue resuelta");
+        require(!p.voted[voter], "Ya voto");
+        require(voter != p.proposer, "El que propone no vota");
+
+        p.voted[voter] = true;
+        if (approve) p.votesFor += 1; else p.votesAgainst += 1;
+        emit LimitVoted(id, voter, approve, p.votesFor, p.votesAgainst);
+
+        uint256 needed = majorityNeeded();
+        if (p.votesFor >= needed) {
+            p.executed = true;
+            creditLimit = p.newLimit;
+            emit LimitChangeResolved(id, true, p.newLimit);
+        } else if (p.votesAgainst >= needed) {
+            p.rejected = true;
+            emit LimitChangeResolved(id, false, p.newLimit);
         }
     }
 }

@@ -1,17 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import type { Group } from "../types";
 import { api } from "../lib/api";
 import toast from "react-hot-toast";
 import { signTyped, toWei } from "../lib/eip712";
 
-// Helpers para montos (simulando 1 MON = $1000 ARS)
-const FIAT_TO_MON = 1000;
-const monToFiat = (mon: number) => mon * FIAT_TO_MON;
-const fiatToMon = (fiat: number) => fiat / FIAT_TO_MON;
+// Helpers para montos (simulando conversin a USDC)
 
 interface GroupFormsProps {
-  type: "new_group" | "deposit" | "spend" | "join_group";
+  type: "new_group" | "deposit" | "spend" | "join_group" | "propose_limit";
   group?: Group;
   onSuccess: () => void;
   onCancel: () => void;
@@ -22,6 +19,21 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
   const [error, setError] = useState("");
   const { user, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
+
+  // Tasa dinámica ARS -> USD (USDC)
+  const [fiatToMonRate, setFiatToMonRate] = useState(1000);
+
+  useEffect(() => {
+    fetch("https://dolarapi.com/v1/dolares/cripto")
+      .then(res => res.json())
+      .then(data => {
+        if (data.venta) setFiatToMonRate(data.venta);
+      })
+      .catch(console.error);
+  }, []);
+
+  const monToFiat = (mon: number) => mon * fiatToMonRate;
+  const fiatToMon = (fiat: number) => Number((fiat / fiatToMonRate).toFixed(6));
 
   const handleCreateGroup = async (name: string, limitFiat: number) => {
     let tid;
@@ -165,6 +177,50 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
     }
   };
 
+  const handleProposeLimit = async (newLimitFiat: number) => {
+    if (!group) return;
+    let tid;
+    try {
+      setLoading(true);
+      setError("");
+      
+      const token = await getAccessToken();
+      if (!token) throw new Error("No autenticado");
+
+      const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+      if (!embeddedWallet) throw new Error("Wallet no encontrada");
+
+      const { nonce } = await api.getNonce(token, group.id);
+      
+      const amountMon = String(fiatToMon(newLimitFiat));
+      
+      const message = {
+        user: user?.wallet?.address,
+        newLimit: toWei(amountMon),
+        nonce: Number(nonce)
+      };
+
+      const signature = await signTyped(embeddedWallet, "proposeLimit", message);
+
+      tid = toast.loading("Procesando propuesta de límite...");
+      const start = Date.now();
+      await api.proposeLimit(token, group.id, {
+        newLimit: message.newLimit,
+        nonce,
+        signature
+      });
+      const end = Date.now();
+      
+      toast.success(`¡Propuesta creada en ${(end-start)/1000}s! ⚡️`, { id: tid });
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+      if (tid) toast.dismiss(tid);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (type === "new_group") return <NewGroupForm onSubmit={handleCreateGroup} error={error} loading={loading} />;
   if (type === "deposit") return <DepositForm onSubmit={handleDeposit} error={error} loading={loading} />;
   if (type === "join_group") return (
@@ -184,6 +240,9 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
   if (type === "spend") {
     const limit = group ? monToFiat(Number(group.creditLimit)) : 0;
     return <SpendForm limit={limit} onSubmit={handleSpend} error={error} loading={loading} />;
+  }
+  if (type === "propose_limit") {
+    return <ProposeLimitForm onSubmit={handleProposeLimit} error={error} loading={loading} />;
   }
   return null;
 }
@@ -328,6 +387,34 @@ function NewGroupForm({ onSubmit, error, loading }: { onSubmit: (n: string, l: n
       
       <button className="btn-primary" style={{ width: "100%", marginTop: "16px" }} onClick={() => onSubmit(name, Number(limit))} disabled={loading}>
         {loading ? "Creando..." : "Crear Grupo"}
+      </button>
+    </div>
+  );
+}
+
+function ProposeLimitForm({ onSubmit, error, loading }: { onSubmit: (a: number) => void; error: string; loading: boolean }) {
+  const [amount, setAmount] = useState("");
+  
+  return (
+    <div>
+      <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>
+        Propón un nuevo límite general para el grupo. Si hay otros miembros, deberán votar para aprobarlo.
+      </p>
+      
+      <div className="form-group">
+        <label className="form-label">Nuevo Límite de Gasto (ARS)</label>
+        <input 
+          className="form-input" 
+          type="number" 
+          placeholder="Ej: 50000" 
+          value={amount} 
+          onChange={e => setAmount(e.target.value)} 
+        />
+      </div>
+
+      {error && <div className="error-msg">{error}</div>}
+      <button className="btn-primary" style={{ width: "100%", marginTop: "16px" }} onClick={() => onSubmit(Number(amount))} disabled={loading}>
+        {loading ? "Proponiendo..." : "Proponer Límite"}
       </button>
     </div>
   );

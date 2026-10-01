@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { GroupsService } from "./groups.service";
 import { RelayerService } from "../relayer/relayer.service";
 import { UsersService } from "../users/users.service";
@@ -33,7 +33,8 @@ export class GroupsController {
   @Get()
   async list(@Req() req: any) {
     const user = await this.currentUser(req);
-    return this.groups.findAllForUser(user.id);
+    const groups = await this.groups.findAllForUser(user.id);
+    return groups.map(g => ({ ...g, isCreator: g.creatorUserId === user.id }));
   }
 
   @Get("stats/me")
@@ -46,7 +47,22 @@ export class GroupsController {
   async getOne(@Req() req: any, @Param("id") groupId: string) {
     const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
-    const state = await this.relayer.getGroupState(group!.contractAddress, user.walletAddress);
+    let state: any = {
+      name: group!.name,
+      creditLimit: "0",
+      dailyLimit: 0,
+      majorityNeeded: 0,
+      balance: "0",
+      transactions: [],
+      pending: [],
+      limitProposals: [],
+      pendingLimitProposals: [],
+    };
+    try {
+      state = await this.relayer.getGroupState(group!.contractAddress, user.walletAddress);
+    } catch (e: any) {
+      console.error(`Could not fetch group state for ${group!.contractAddress}:`, e.message);
+    }
     const deposits = await this.groups.getDepositsForGroup(group!.id);
     
     const memberUsers = await this.users.findMany(group!.members || []);
@@ -57,8 +73,7 @@ export class GroupsController {
         usersMap[u.walletAddress.toLowerCase()] = { name: u.name, email: u.email };
       }
     }
-    
-    return { ...group, ...state, deposits, usersMap };
+    return { ...group, creatorUserId: group!.creatorUserId, ...state, deposits, usersMap };
   }
 
   /** Estado real del fondo, leído en vivo desde Monad: balance, límites y feed de movimientos. */
@@ -66,7 +81,22 @@ export class GroupsController {
   async state(@Req() req: any, @Param("id") groupId: string) {
     const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
-    const onchain = await this.relayer.getGroupState(group!.contractAddress, user.walletAddress);
+    let onchain: any = {
+      name: group!.name,
+      creditLimit: "0",
+      dailyLimit: 0,
+      majorityNeeded: 0,
+      balance: "0",
+      transactions: [],
+      pending: [],
+      limitProposals: [],
+      pendingLimitProposals: [],
+    };
+    try {
+      onchain = await this.relayer.getGroupState(group!.contractAddress, user.walletAddress);
+    } catch (e) {
+      console.warn(`Could not fetch group state for ${group!.contractAddress}`);
+    }
     const deposits = await this.groups.getDepositsForGroup(group!.id);
 
     const memberUsers = await this.users.findMany(group!.members || []);
@@ -78,7 +108,7 @@ export class GroupsController {
       }
     }
 
-    return { id: group!.id, contractAddress: group!.contractAddress, ...onchain, deposits, usersMap };
+    return { id: group!.id, contractAddress: group!.contractAddress, creatorUserId: group!.creatorUserId, isCreator: group!.creatorUserId === user.id, ...onchain, deposits, usersMap };
   }
 
   @Post()
@@ -163,5 +193,56 @@ export class GroupsController {
     });
 
     return { ok: true };
+  }
+
+  @Post(":id/limit-proposal")
+  async proposeLimit(
+    @Req() req: any,
+    @Param("id") groupId: string,
+    @Body() body: { newLimit: number; nonce: string; signature: string },
+  ) {
+    const user = await this.currentUser(req);
+    const group = await this.groups.findOne(groupId);
+    await this.relayer.proposeLimitChange(
+      group!.contractAddress,
+      user.walletAddress,
+      body.newLimit,
+      BigInt(body.nonce),
+      body.signature,
+    );
+    this.notifications.emitNotification(group!.id, "limit_proposal", {
+      type: "limit_proposal",
+      message: `${user.email || user.name || 'El creador'} propuso un nuevo límite de retiro de $${body.newLimit}`,
+    });
+    return { ok: true };
+  }
+
+  @Post(":id/limit-vote")
+  async voteLimit(
+    @Req() req: any,
+    @Param("id") groupId: string,
+    @Body() body: { proposalId: number; approve: boolean; nonce: string; signature: string },
+  ) {
+    const user = await this.currentUser(req);
+    const group = await this.groups.findOne(groupId);
+    await this.relayer.voteLimitChange(
+      group!.contractAddress,
+      user.walletAddress,
+      body.proposalId,
+      body.approve,
+      BigInt(body.nonce),
+      body.signature,
+    );
+    this.notifications.emitNotification(group!.id, "vote", {
+      type: "vote",
+      message: `${user.email || user.name || 'Un miembro'} votó ${body.approve ? 'a favor' : 'en contra'} del cambio de límite #${body.proposalId}`,
+    });
+    return { ok: true };
+  }
+
+  @Delete(":id")
+  async deleteGroup(@Req() req: any, @Param("id") groupId: string) {
+    const user = await this.currentUser(req);
+    return this.groups.remove(groupId, user.id);
   }
 }
