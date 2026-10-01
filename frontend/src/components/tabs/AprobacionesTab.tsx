@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import type { Group } from "../../types";
 import { Check, X, HandCoins } from "@phosphor-icons/react";
 
@@ -13,7 +14,20 @@ interface AprobacionesTabProps {
 const fmt = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 
 export default function AprobacionesTab({ group, userAddress, onApprove, onReject, onApproveLimit, onRejectLimit }: AprobacionesTabProps) {
+  const [rate, setRate] = useState(1000);
+
+  useEffect(() => {
+    fetch("https://dolarapi.com/v1/dolares/cripto")
+      .then(res => res.json())
+      .then(data => {
+        if (data.venta) setRate(data.venta);
+      })
+      .catch(console.error);
+  }, []);
+
   if (!group) return <div className="text-center text-muted" style={{ padding: "40px 20px" }}>Selecciona un grupo para ver sus aprobaciones pendientes.</div>;
+
+  const getGroupName = (g: Group) => g.editedName || g.name;
 
   const pendingTxs = group.pending || [];
   const pendingLimits = group.pendingLimitProposals || [];
@@ -31,7 +45,7 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
       
       <div style={{ background: "var(--bg-color)", padding: "16px 20px" }}>
         <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-          Solicitudes pendientes en {group.name}
+          Solicitudes pendientes en {getGroupName(group)}
         </div>
 
         {pendingLimits.map((tx, idx) => {
@@ -60,11 +74,11 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
                 <div className="approval-amounts">
                   <div>
                     <div className="approval-amount-label">Monto Propuesto</div>
-                    <div className="approval-amount-value" style={{ color: "var(--primary)" }}>{fmt(newLimit * 1000)}</div>
+                    <div className="approval-amount-value" style={{ color: "var(--primary)" }}>{fmt(newLimit * rate)}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div className="approval-amount-label">Límite Actual</div>
-                    <div className="approval-amount-value">{fmt(limit * 1000)}</div>
+                    <div className="approval-amount-value">{fmt(limit * rate)}</div>
                   </div>
                 </div>
 

@@ -129,7 +129,7 @@ export class GroupsService {
     if (!group) throw new Error("Grupo no encontrado");
     if (group.creatorUserId !== userId) throw new Error("Solo el creador puede editar el grupo");
     
-    group.name = name;
+    group.editedName = name;
     await this.repo.save(group);
     return group;
   }

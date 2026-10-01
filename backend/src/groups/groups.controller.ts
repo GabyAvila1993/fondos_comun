@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Patch, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Patch, Req, UseGuards, BadRequestException } from "@nestjs/common";
 import { GroupsService } from "./groups.service";
 import { RelayerService } from "../relayer/relayer.service";
 import { UsersService } from "../users/users.service";
@@ -73,7 +73,7 @@ export class GroupsController {
         usersMap[u.walletAddress.toLowerCase()] = { name: u.name, email: u.email };
       }
     }
-    return { ...group, creatorUserId: group!.creatorUserId, ...state, deposits, usersMap };
+    return { ...group, creatorUserId: group!.creatorUserId, ...state, name: group!.name, deposits, usersMap };
   }
 
   /** Estado real del fondo, leído en vivo desde Monad: balance, límites y feed de movimientos. */
@@ -108,7 +108,7 @@ export class GroupsController {
       }
     }
 
-    return { id: group!.id, contractAddress: group!.contractAddress, creatorUserId: group!.creatorUserId, isCreator: group!.creatorUserId === user.id, ...onchain, deposits, usersMap };
+    return { id: group!.id, contractAddress: group!.contractAddress, creatorUserId: group!.creatorUserId, isCreator: group!.creatorUserId === user.id, ...onchain, name: group!.name, deposits, usersMap };
   }
 
   @Post()
@@ -120,10 +120,14 @@ export class GroupsController {
   /** Paso 1 del flujo "unirme/gastar/votar": el front pide el nonce actual para armar la firma. */
   @Get(":id/nonce")
   async getNonce(@Req() req: any, @Param("id") groupId: string) {
-    const user = await this.currentUser(req);
-    const group = await this.groups.findOne(groupId);
-    const nonce = await this.relayer.getNonce(group!.contractAddress, user.walletAddress);
-    return { nonce: nonce.toString() };
+    try {
+      const user = await this.currentUser(req);
+      const group = await this.groups.findOne(groupId);
+      const nonce = await this.relayer.getNonce(group!.contractAddress, user.walletAddress);
+      return { nonce: nonce.toString() };
+    } catch (err: any) {
+      throw new BadRequestException("Este grupo utiliza una versión antigua del contrato que no soporta esta función. Por favor, crea un nuevo grupo.");
+    }
   }
 
   @Post(":id/join")
@@ -199,22 +203,26 @@ export class GroupsController {
   async proposeLimit(
     @Req() req: any,
     @Param("id") groupId: string,
-    @Body() body: { newLimit: number; nonce: string; signature: string },
+    @Body() body: { newLimit: string; nonce: string; signature: string },
   ) {
-    const user = await this.currentUser(req);
-    const group = await this.groups.findOne(groupId);
-    await this.relayer.proposeLimitChange(
-      group!.contractAddress,
-      user.walletAddress,
-      body.newLimit,
-      BigInt(body.nonce),
-      body.signature,
-    );
-    this.notifications.emitNotification(group!.id, "limit_proposal", {
-      type: "limit_proposal",
-      message: `${user.email || user.name || 'El creador'} propuso un nuevo límite de retiro de $${body.newLimit}`,
-    });
-    return { ok: true };
+    try {
+      const user = await this.currentUser(req);
+      const group = await this.groups.findOne(groupId);
+      await this.relayer.proposeLimitChange(
+        group!.contractAddress,
+        user.walletAddress,
+        body.newLimit,
+        BigInt(body.nonce),
+        body.signature,
+      );
+      this.notifications.emitNotification(group!.id, "limit_proposal", {
+        type: "limit_proposal",
+        message: `${user.email || user.name || 'El creador'} propuso un nuevo límite de retiro de $${body.newLimit}`,
+      });
+      return { ok: true };
+    } catch (err: any) {
+      throw new BadRequestException(err.message || String(err));
+    }
   }
 
   @Post(":id/limit-vote")

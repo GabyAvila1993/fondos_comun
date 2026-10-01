@@ -25,6 +25,6 @@ export class NotificationsGateway implements OnGatewayInit, OnGatewayConnection,
   }
 
   emitNotification(group: string, eventName: string, data: any) {
-    this.server.emit(eventName, data);
+    this.server.emit(eventName, { ...data, groupId: group });
   }
 }

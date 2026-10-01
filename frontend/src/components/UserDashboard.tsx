@@ -29,42 +29,50 @@ export default function UserDashboard() {
   const [sheetView, setSheetView] = useState<"new_group" | "deposit" | "spend" | "join_group" | "propose_limit" | null>(null);
   const [joinGroupData, setJoinGroupData] = useState<Group | undefined>(undefined);
 
+  const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(false);
+
   useEffect(() => {
     if (user) {
-      loadData();
+      loadBasicData();
     }
     
     const handleRefresh = () => {
-      loadData();
+      loadBasicData();
     };
+    
+    const handleRefreshGroup = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const groupId = customEvent.detail;
+      if (groupId === activeGroupId) {
+        fetchGroupDetails(groupId);
+      }
+    };
+
     window.addEventListener("group_deleted_refresh", handleRefresh);
+    window.addEventListener("refresh_group", handleRefreshGroup);
+    
     return () => {
       window.removeEventListener("group_deleted_refresh", handleRefresh);
+      window.removeEventListener("refresh_group", handleRefreshGroup);
     };
   }, [user]);
 
-  const loadData = async () => {
+  const loadBasicData = async () => {
     try {
       const token = await getAccessToken();
       if (!token) return;
 
       const basicGroups = await api.listGroups(token);
       
-      // Fetch full state for each group (balance, txs, pending, etc)
-      const fullGroups = await Promise.all(
-        basicGroups.map(async (g) => {
-          try {
-            const full = await api.getGroup(token, g.id);
-            return { ...g, ...full, isCreator: g.isCreator };
-          } catch {
-            return g;
-          }
-        })
-      );
+      setGroups(prev => {
+        return basicGroups.map(bg => {
+          const existing = prev.find(p => p.id === bg.id);
+          return existing ? { ...existing, ...bg } : bg;
+        });
+      });
       
-      setGroups(fullGroups);
-      if (fullGroups.length > 0 && !activeGroupId) {
-        setActiveGroupId(fullGroups[0].id);
+      if (basicGroups.length > 0 && !activeGroupId) {
+        setActiveGroupId(basicGroups[0].id);
       }
 
       try {
@@ -86,7 +94,7 @@ export default function UserDashboard() {
         window.history.replaceState({}, document.title, "/");
         
         // Let's check if the user is already in this group
-        const existing = fullGroups.find(g => g.id === joinId);
+        const existing = basicGroups.find(g => g.id === joinId);
         if (existing) {
           toast("Ya eres miembro de este grupo.", { icon: "ℹ️" });
           setActiveGroupId(existing.id);
@@ -103,6 +111,49 @@ export default function UserDashboard() {
       }
     } catch (e) {
       console.error("Error loading data", e);
+    }
+  };
+
+  useEffect(() => {
+    if (activeGroupId && user) {
+      fetchGroupDetails(activeGroupId);
+    }
+  }, [activeGroupId, user]);
+
+  useEffect(() => {
+    const loadMissingDetails = async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+      for (const g of groups) {
+        if (g.deposits === undefined && g.id !== activeGroupId) {
+          try {
+            const full = await api.getGroup(token, g.id);
+            setGroups(prev => prev.map(pg => pg.id === g.id ? { ...pg, ...full, isCreator: pg.isCreator } : pg));
+          } catch (e) {
+            console.error("Error background fetching group", g.id, e);
+          }
+        }
+      }
+    };
+    if (groups.length > 0 && user) {
+      loadMissingDetails();
+    }
+  }, [groups, user, activeGroupId]);
+
+  const fetchGroupDetails = async (id: string, delayMs = 0) => {
+    setIsLoadingDetails(true);
+    if (delayMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+      const full = await api.getGroup(token, id);
+      setGroups(prev => prev.map(g => g.id === id ? { ...g, ...full, isCreator: g.isCreator } : g));
+    } catch (e) {
+      console.error("Error fetching group details", e);
+    } finally {
+      setIsLoadingDetails(false);
     }
   };
 
@@ -157,7 +208,7 @@ export default function UserDashboard() {
       const end = Date.now();
 
       toast.success(`¡Gasto aprobado en ${(end-start)/1000}s! ⚡️`, { id: tid });
-      loadData();
+      fetchGroupDetails(activeGroup.id);
     } catch (err: any) {
       toast.error("Error al aprobar: " + err.message);
       toast.dismiss();
@@ -195,7 +246,7 @@ export default function UserDashboard() {
       const end = Date.now();
 
       toast.success(`¡Gasto rechazado en ${(end-start)/1000}s! ⚡️`, { id: tid });
-      loadData();
+      fetchGroupDetails(activeGroup.id);
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
       toast.dismiss();
@@ -233,7 +284,7 @@ export default function UserDashboard() {
       const end = Date.now();
 
       toast.success(`¡Cambio de límite aprobado en ${(end-start)/1000}s! ⚡️`, { id: tid });
-      loadData();
+      fetchGroupDetails(activeGroup.id);
     } catch (err: any) {
       toast.error("Error al aprobar: " + err.message);
       toast.dismiss();
@@ -271,7 +322,7 @@ export default function UserDashboard() {
       const end = Date.now();
 
       toast.success(`¡Cambio de límite rechazado en ${(end-start)/1000}s! ⚡️`, { id: tid });
-      loadData();
+      fetchGroupDetails(activeGroup.id);
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
       toast.dismiss();
@@ -285,8 +336,8 @@ export default function UserDashboard() {
       const tid = toast.loading("Eliminando grupo...");
       await api.deleteGroup(token, groupId);
       toast.success("Grupo eliminado", { id: tid });
+      setGroups(prev => prev.filter(g => g.id !== groupId));
       if (activeGroupId === groupId) setActiveGroupId("");
-      loadData();
     } catch (err: any) {
       toast.error("Error al eliminar: " + err.message);
     }
@@ -299,7 +350,7 @@ export default function UserDashboard() {
       const tid = toast.loading("Actualizando nombre...");
       await api.updateGroup(token, groupId, { name: newName });
       toast.success("Nombre actualizado", { id: tid });
-      loadData();
+      setGroups(prev => prev.map(g => g.id === groupId ? { ...g, editedName: newName } : g));
     } catch (err: any) {
       toast.error("Error al actualizar: " + err.message);
     }
@@ -321,6 +372,7 @@ export default function UserDashboard() {
             onProposeLimit={() => setSheetView("propose_limit")}
             onDeleteGroup={handleDeleteGroup}
             onRenameGroup={handleRenameGroup}
+            isLoadingDetails={isLoadingDetails}
           />
         )}
         {activeTab === "movimientos" && (
@@ -363,7 +415,18 @@ export default function UserDashboard() {
         <GroupForms 
           type={sheetView!} 
           group={sheetView === "join_group" ? joinGroupData : activeGroup} 
-          onSuccess={() => { setSheetView(null); setJoinGroupData(undefined); loadData(); }} 
+          onSuccess={() => { 
+            setSheetView(null); 
+            setJoinGroupData(undefined); 
+            if (sheetView === "new_group" || sheetView === "join_group") {
+              // Pequeño delay para que el RPC de Monad asimile la creación
+              setTimeout(() => loadBasicData(), 1500);
+            } else if (activeGroup) {
+              fetchGroupDetails(activeGroup.id, 1500);
+            } else {
+              setTimeout(() => loadBasicData(), 1500);
+            }
+          }} 
           onCancel={() => { setSheetView(null); setJoinGroupData(undefined); }} 
         />
       </Sheet>

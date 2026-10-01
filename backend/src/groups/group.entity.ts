@@ -13,6 +13,9 @@ export class Group {
   @Column()
   name: string;
 
+  @Column({ nullable: true })
+  editedName: string;
+
   @Column()
   contractAddress: string;
 

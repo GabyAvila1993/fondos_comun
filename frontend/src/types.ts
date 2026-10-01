@@ -1,6 +1,7 @@
 export interface Group {
   id: string;
   name: string;
+  editedName?: string;
   contractAddress: string;
   creditLimit: string;
   dailyLimit: number;
@@ -14,6 +15,7 @@ export interface Group {
   deposits?: Deposit[];
   creatorUserId?: string;
   isCreator?: boolean;
+  blockchainDataLoaded?: boolean;
 }
 
 export interface Deposit {

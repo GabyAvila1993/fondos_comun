@@ -21,7 +21,7 @@ export default function BalanceHero({
       <div className="group-tabs">
         {groups.map((g) => (
           <div key={g.id} className={`group-tab ${g.id === activeId ? "active" : ""}`} onClick={() => onSelect(g.id)}>
-            {g.name}
+            {g.editedName || g.name}
           </div>
         ))}
       </div>

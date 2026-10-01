@@ -12,6 +12,8 @@ type FilterType = "all" | "in" | "out";
 export default function MovimientosTab({ groups, initialGroupId }: MovimientosTabProps) {
   const [filter, setFilter] = useState<FilterType>("all");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(initialGroupId || null);
+  
+  const getGroupName = (g: Group) => g.editedName || g.name;
 
   useEffect(() => {
     setSelectedGroupId(initialGroupId || null);
@@ -33,7 +35,7 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
           type: "in" as const,
           id: `dep-${dep.id}`,
           groupId: g.id,
-          groupName: g.name,
+          groupName: getGroupName(g),
           user: uName,
           avatar: uName.substring(0,2).toUpperCase(),
           desc: "Ingreso de dinero",
@@ -53,15 +55,19 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
         const defaultName = tx.proposer?.substring(0, 6) || "Unknown";
         const uName = u ? (u.name || (u.email ? u.email.split('@')[0] : defaultName)) : defaultName;
 
+        const match = tx.desc.match(/\|ARS:(\d+(?:\.\d+)?)$/);
+        const fiatAmount = match ? Number(match[1]) : Number(tx.amount) * 1000;
+        const cleanDesc = tx.desc.replace(/\|ARS:\d+(?:\.\d+)?$/, "");
+
         return {
           type: "out" as const,
           id: `tx-${tx.id}`,
           groupId: g.id,
-          groupName: g.name,
+          groupName: getGroupName(g),
           user: uName,
           avatar: uName.substring(0,2).toUpperCase(),
-          desc: tx.desc || "Gasto general",
-          amount: Number(tx.amount) * 1000,
+          desc: cleanDesc || "Gasto general",
+          amount: fiatAmount,
           // Usamos baseTime para intercalar los gastos con los depósitos correctamente
           timestamp: baseTime - ((g.transactions?.length || 0) - idx) * 60000,
           status: tx.executed ? "Completado" : (tx.rejected ? "Rechazado" : "Pendiente")
@@ -100,7 +106,7 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
             >
               ←
             </span>
-            <span className="header-title">Movimientos en {group.name}</span>
+            <span className="header-title">Movimientos en {getGroupName(group)}</span>
           </div>
         </div>
         
@@ -157,7 +163,7 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
           return (
             <div key={g.id} style={{ marginBottom: "30px" }}>
               <h3 style={{ fontSize: "1.1rem", marginBottom: "12px", borderBottom: "1px solid var(--border)", paddingBottom: "8px" }}>
-                {g.name}
+                {getGroupName(g)}
               </h3>
               <div className="tx-list">
                 {m.map(item => (

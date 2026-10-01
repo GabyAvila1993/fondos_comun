@@ -24,6 +24,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           border: '1px solid var(--border-color)',
         },
       });
+      if (data.groupId) {
+        window.dispatchEvent(new CustomEvent("refresh_group", { detail: data.groupId }));
+      }
     });
 
     s.on("vote", (data) => {
@@ -36,6 +39,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           border: '1px solid var(--border-color)',
         },
       });
+      if (data.groupId) {
+        window.dispatchEvent(new CustomEvent("refresh_group", { detail: data.groupId }));
+      }
     });
 
     s.on("group_deleted", (data) => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Group } from "../../types";
 import { Plus, Wallet, FileText, Users, ShareNetwork, CaretDown, Trash, PencilSimple } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
@@ -15,15 +15,39 @@ interface InicioTabProps {
   onProposeLimit: () => void;
   onDeleteGroup: (id: string) => void;
   onRenameGroup: (id: string, newName: string) => void;
+  isLoadingDetails?: boolean;
 }
 
 const fmt = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 
-export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend, onProposeLimit, onDeleteGroup, onRenameGroup }: InicioTabProps) {
+export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend, onProposeLimit, onDeleteGroup, onRenameGroup, isLoadingDetails }: InicioTabProps) {
   const activeGroup = groups.find((g) => g.id === activeGroupId);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
   const [groupToRename, setGroupToRename] = useState<Group | null>(null);
+  const [fiatToMonRate, setFiatToMonRate] = useState(1000);
+
+  // Mantenemos la tasa de cambio actualizada para mostrar límites en ARS
+  useEffect(() => {
+    fetch("https://dolarapi.com/v1/dolares/cripto")
+      .then(res => res.json())
+      .then(data => {
+        if (data.venta) setFiatToMonRate(data.venta);
+      })
+      .catch(console.error);
+  }, []);
+
+  const getFiatBalance = (g: Group) => {
+    if (g.deposits === undefined) return undefined;
+    const totalDeposits = g.deposits.reduce((acc: number, d: any) => acc + Number(d.amount), 0);
+    const totalExpenses = (g.transactions || []).filter((t: any) => t.executed).reduce((acc: number, t: any) => {
+      const match = (t.desc || "").match(/\|ARS:(\d+(?:\.\d+)?)$/);
+      return acc + (match ? Number(match[1]) : Number(t.amount) * fiatToMonRate);
+    }, 0);
+    return totalDeposits - totalExpenses;
+  };
+
+  const getGroupName = (g: Group) => g.editedName || g.name;
 
   const handleShare = (e: React.MouseEvent, groupId: string) => {
     e.stopPropagation();
@@ -46,7 +70,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
               className="custom-dropdown-button"
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             >
-              {activeGroup ? activeGroup.name : "Seleccionar grupo"}
+              {activeGroup ? getGroupName(activeGroup) : "Seleccionar grupo"}
               <CaretDown weight="bold" />
             </button>
 
@@ -62,7 +86,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
                     <span onClick={() => {
                       onSelectGroup(g.id);
                       setIsDropdownOpen(false);
-                    }} style={{ flexGrow: 1 }}>{g.name}</span>
+                    }} style={{ flexGrow: 1 }}>{getGroupName(g)}</span>
                     
                     {g.isCreator && (
                       <Trash 
@@ -87,9 +111,13 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
         {activeGroup ? (
           <div className="balance-section">
             <div className="balance-label">Fondo disponible</div>
-            <div className="balance-amount">{fmt(Number(activeGroup.balance || 0) * 1000)}</div>
+            {isLoadingDetails || activeGroup.deposits === undefined ? (
+              <div className="loading-text-blink" style={{ color: "white", fontSize: "1.5rem", fontWeight: 600, padding: "10px 0" }}>Cargando saldo...</div>
+            ) : (
+              <div className="balance-amount">{fmt(getFiatBalance(activeGroup)!)}</div>
+            )}
             <div className="limit-info mt-2" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-              <span>Límite libre por persona: <span style={{ fontWeight: 600 }}>{fmt(Number(activeGroup.creditLimit) * 1000)}</span></span>
+              <span>Límite libre por persona: <span style={{ fontWeight: 600 }}>{fmt(Number(activeGroup.creditLimit) * fiatToMonRate)}</span></span>
               {activeGroup.isCreator && (
                 <button 
                   onClick={onProposeLimit}
@@ -137,10 +165,10 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
         <div className="group-list" style={{ padding: "0 20px 8px" }}>
           {groups.map((g) => (
             <div className="group-list-item" key={g.id} onClick={() => onGroupClick(g.id)}>
-              <div className="group-avatar">{g.name.substring(0, 2).toUpperCase()}</div>
+              <div className="group-avatar">{getGroupName(g).substring(0, 2).toUpperCase()}</div>
               <div className="group-info">
                 <div className="group-name" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  {g.name}
+                  {getGroupName(g)}
                   {g.isCreator && (
                     <PencilSimple 
                       size={16} 
@@ -156,7 +184,13 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
                 </div>
                 <div className="group-meta">{g.members?.length || 1} de {g.members?.length || 1} miembros</div>
               </div>
-              <div className="group-balance">{fmt(Number(g.balance || 0) * 1000)}</div>
+              <div className="group-balance">
+                {getFiatBalance(g) === undefined ? (
+                  <span className="loading-text-blink" style={{ fontSize: "0.85rem", color: "var(--primary-light)" }}>Cargando saldo...</span>
+                ) : (
+                  fmt(getFiatBalance(g)!)
+                )}
+              </div>
               <button 
                 onClick={(e) => handleShare(e, g.id)}
                 style={{ 
@@ -185,7 +219,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
       <Sheet isOpen={!!groupToDelete} onClose={() => setGroupToDelete(null)} title="Eliminar grupo">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <p style={{ color: 'var(--text-muted)' }}>
-            ¿Estás seguro que deseas eliminar el grupo <strong>{groupToDelete?.name}</strong>?
+            ¿Estás seguro que deseas eliminar el grupo <strong>{groupToDelete ? getGroupName(groupToDelete) : ''}</strong>?
           </p>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>
             Esta acción no se puede deshacer y todos los miembros perderán el acceso.
@@ -223,7 +257,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
               type="text" 
               id="rename-input"
               className="form-input" 
-              defaultValue={groupToRename?.name}
+              defaultValue={groupToRename ? getGroupName(groupToRename) : ''}
               placeholder="Ej. Vacaciones Mdz"
             />
           </div>
@@ -241,7 +275,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
               onClick={() => {
                 const input = document.getElementById("rename-input") as HTMLInputElement;
                 const newName = input?.value;
-                if (groupToRename && newName && newName.trim() && newName.trim() !== groupToRename.name) {
+                if (groupToRename && newName && newName.trim() && newName.trim() !== getGroupName(groupToRename)) {
                   onRenameGroup(groupToRename.id, newName.trim());
                   setGroupToRename(null);
                 }

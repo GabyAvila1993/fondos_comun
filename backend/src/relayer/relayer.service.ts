@@ -57,7 +57,7 @@ export class RelayerService {
   private groupContract(address: string) {
     return new ethers.Contract(
       address, 
-      SharedWalletAbi, 
+      SharedWalletAbi.abi, 
       this.wallet
     );
   }
@@ -126,14 +126,16 @@ export class RelayerService {
     let attempts = 0;
     while (attempts < 3) {
       try {
-        [name, creditLimit, dailyLimit, majority, bal, total] = await Promise.all([
+        const promises = [
           contract.name(),
           contract.creditLimit(),
           contract.dailyLimit(),
           contract.majorityNeeded(),
           contract.balance(),
           contract.transactionCount(),
-        ]);
+        ];
+        promises.forEach(p => p.catch(() => {}));
+        [name, creditLimit, dailyLimit, majority, bal, total] = await Promise.all(promises);
         break; // Success
       } catch (err: any) {
         attempts++;
@@ -172,17 +174,21 @@ export class RelayerService {
 
     const limitProposals = [];
     for (let i = 0; i < Number(limitProposalCount); i++) {
-      const p = await contract.getLimitProposal(i);
-      limitProposals.push({
-        id: i,
-        proposer: p[0],
-        newLimit: fmt(p[1]),
-        executed: p[2],
-        rejected: p[3],
-        votesFor: Number(p[4]),
-        votesAgainst: Number(p[5]),
-        createdAt: Number(p[6]) * 1000,
-      });
+      try {
+        const p = await contract.getLimitProposal(i);
+        limitProposals.push({
+          id: i,
+          proposer: p[0],
+          newLimit: fmt(p[1]),
+          executed: p[2],
+          rejected: p[3],
+          votesFor: Number(p[4]),
+          votesAgainst: Number(p[5]),
+          createdAt: Number(p[6]) * 1000,
+        });
+      } catch (e) {
+        console.warn(`Could not fetch limit proposal ${i} for ${groupAddress}`);
+      }
     }
 
     return {
@@ -213,7 +219,7 @@ export class RelayerService {
   async requestExpense(
     groupAddress: string,
     userAddress: string,
-    amountUsd: string,
+    amountWei: string,
     desc: string,
     forceApproval: boolean,
     nonce: bigint,
@@ -222,7 +228,7 @@ export class RelayerService {
     const contract = this.groupContract(groupAddress);
     const tx = await contract.requestExpenseFor(
       userAddress,
-      ethers.parseUnits(amountUsd, USDC_DECIMALS),
+      amountWei,
       desc,
       forceApproval,
       nonce,
@@ -237,9 +243,9 @@ export class RelayerService {
     return tx.wait();
   }
 
-  async proposeLimitChange(groupAddress: string, proposer: string, newLimitFiat: number, nonce: bigint, signature: string) {
+  async proposeLimitChange(groupAddress: string, proposer: string, newLimitWei: string, nonce: bigint, signature: string) {
     const contract = this.groupContract(groupAddress);
-    const tx = await contract.proposeLimitChangeFor(proposer, ethers.parseUnits(newLimitFiat.toString(), USDC_DECIMALS), nonce, signature);
+    const tx = await contract.proposeLimitChangeFor(proposer, newLimitWei, nonce, signature);
     return tx.wait();
   }
 

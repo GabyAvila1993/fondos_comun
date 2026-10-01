@@ -103,14 +103,25 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
 
       const { nonce } = await api.getNonce(token, group.id);
       
-      const forceApproval = amountFiat > monToFiat(Number(group.creditLimit));
-      
-      const amountMon = String(fiatToMon(amountFiat));
+      let rate = 0.001;
+      try {
+        const resp = await fetch("https://dolarapi.com/v1/dolares/cripto");
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.venta) rate = 1 / data.venta;
+        }
+      } catch (e) {
+        console.warn("Error fetching exchange rate, using fallback");
+      }
+
+      const amountMon = String((amountFiat * rate).toFixed(6));
+      const forceApproval = amountFiat > (Number(group.creditLimit) / rate);
+      const finalDesc = `${desc}|ARS:${amountFiat}`;
       
       const message = {
         user: user?.wallet?.address,
         amount: toWei(amountMon), // Convert to wei for contract
-        desc,
+        desc: finalDesc,
         forceApproval,
         nonce: parseInt(nonce, 10)
       };
@@ -121,7 +132,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
       const start = Date.now();
       await api.requestExpense(token, group.id, {
         amountMon,
-        desc,
+        desc: finalDesc,
         forceApproval,
         nonce,
         signature
@@ -192,10 +203,10 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
 
       const { nonce } = await api.getNonce(token, group.id);
       
-      const amountMon = String(fiatToMon(newLimitFiat));
+      const amountMon = fiatToMon(newLimitFiat).toFixed(6);
       
       const message = {
-        user: user?.wallet?.address,
+        proposer: user?.wallet?.address,
         newLimit: toWei(amountMon),
         nonce: Number(nonce)
       };
@@ -225,7 +236,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
   if (type === "deposit") return <DepositForm onSubmit={handleDeposit} error={error} loading={loading} />;
   if (type === "join_group") return (
     <div style={{ textAlign: "center", padding: "20px 0" }}>
-      <p style={{ marginBottom: "20px" }}>¿Quieres unirte al grupo <strong>{group?.name}</strong>?</p>
+      <p style={{ marginBottom: "20px" }}>¿Quieres unirte al grupo <strong>{group ? (group.editedName || group.name) : ""}</strong>?</p>
       {error && <div className="error-msg">{error}</div>}
       <button 
         className="btn-primary" 
