@@ -1,16 +1,16 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { AuthModule } from "./auth/auth.module";
-import { UsersModule } from "./users/users.module";
-import { GroupsModule } from "./groups/groups.module";
+import { AuthModule } from "./autenticacion/auth.module";
+import { UsersModule } from "./usuarios/users.module";
+import { GroupsModule } from "./grupos/groups.module";
 import { RelayerModule } from "./relayer/relayer.module";
-import { User } from "./users/user.entity";
-import { Group } from "./groups/group.entity";
-import { Deposit } from "./groups/deposit.entity";
-import { GroupDeleteProposal } from "./groups/group-delete-proposal.entity";
-import { NotificationsModule } from "./notifications/notifications.module";
+import { User } from "./usuarios/user.entity";
+import { Group } from "./grupos/group.entity";
+import { Deposit } from "./grupos/deposit.entity";
+import { GroupDeleteProposal } from "./grupos/group-delete-proposal.entity";
+import { NotificationsModule } from "./notificaciones/notifications.module";
 
-import { Notification } from "./notifications/notification.entity";
+import { Notification } from "./notificaciones/notification.entity";
 
 @Module({
   imports: [
