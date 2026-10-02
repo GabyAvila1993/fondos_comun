@@ -9,11 +9,14 @@ interface AprobacionesTabProps {
   onReject: (txId: number) => void;
   onApproveLimit: (proposalId: number) => void;
   onRejectLimit: (proposalId: number) => void;
+  onApproveDelete: (proposalId: string) => void;
+  onRejectDelete: (proposalId: string) => void;
+  readVotes: string[];
 }
 
 const fmt = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 
-export default function AprobacionesTab({ group, userAddress, onApprove, onReject, onApproveLimit, onRejectLimit }: AprobacionesTabProps) {
+export default function AprobacionesTab({ group, userAddress, onApprove, onReject, onApproveLimit, onRejectLimit, onApproveDelete, onRejectDelete, readVotes }: AprobacionesTabProps) {
   const [rate, setRate] = useState(1000);
 
   useEffect(() => {
@@ -29,11 +32,14 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
 
   const getGroupName = (g: Group) => g.editedName || g.name;
 
-  const pendingTxs = group.pending || [];
-  const pendingLimits = group.pendingLimitProposals || [];
+  const pendingTxs = (group.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`));
+  const pendingLimits = (group.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`));
+  const pendingDeletes = (group.deleteProposals || []).filter(p => p.status === "pending" && !readVotes.includes(`del-${p.id}`));
+  
   const limit = Number(group.creditLimit);
   const totalMembers = group.members?.length || 1;
   const requiredVotes = Math.floor(totalMembers / 2) + 1;
+  const deleteRequiredVotes = Math.floor((totalMembers - 1) / 2) + 1;
 
   return (
     <div>
@@ -47,6 +53,61 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
         <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
           Solicitudes pendientes en {getGroupName(group)}
         </div>
+
+        {pendingDeletes.map((proposal, idx) => {
+          let votesFor = 0;
+          for (const v of proposal.votes) {
+            if (v.approve) votesFor++;
+          }
+          const percent = Math.min((votesFor / deleteRequiredVotes) * 100, 100);
+
+          return (
+            <div className="approval-card" key={`delete-${idx}`}>
+              <div className="approval-header">
+                <div className="approval-user-info">
+                  <div className="tx-avatar" style={{ background: "var(--danger)", color: "white" }}>
+                    {proposal.creatorUserId.substring(0,2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>El administrador solicitó</div>
+                    <div className="approval-time">Eliminar el grupo</div>
+                  </div>
+                </div>
+                <div className="approval-role" style={{ background: "#fef2f2", color: "#991b1b" }}>PELIGRO</div>
+              </div>
+
+              <div className="approval-content">
+                <div className="approval-title">Si se aprueba, el grupo será borrado para todos y los saldos on-chain quedarán huérfanos.</div>
+                
+                <div className="approval-progress">
+                  <div className="progress-info">
+                    <span>{votesFor} de {deleteRequiredVotes} aprobaciones necesarias</span>
+                    <span style={{ fontWeight: 600 }}>{Math.round(percent)}%</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${percent}%`, background: "var(--danger)" }}></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="approval-actions">
+                <button 
+                  className="approval-btn reject" 
+                  onClick={() => onRejectDelete(proposal.id)}
+                >
+                  <X weight="bold" size={18} /> Rechazar
+                </button>
+                <button 
+                  className="approval-btn approve"
+                  style={{ background: "var(--danger)", color: "white" }}
+                  onClick={() => onApproveDelete(proposal.id)}
+                >
+                  <Check weight="bold" size={18} /> Aprobar Eliminación
+                </button>
+              </div>
+            </div>
+          );
+        })}
 
         {pendingLimits.map((tx, idx) => {
           const newLimit = Number(tx.newLimit);
@@ -176,7 +237,7 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
           );
         })}
 
-        {pendingTxs.length === 0 && pendingLimits.length === 0 && (
+        {pendingTxs.length === 0 && pendingLimits.length === 0 && pendingDeletes.length === 0 && (
           <div className="text-center text-muted" style={{ padding: "40px 0" }}>No hay solicitudes pendientes en este momento.</div>
         )}
       </div>

@@ -17,10 +17,18 @@ async function request(path: string, token: string, options: RequestInit = {}) {
 export const api = {
   listGroups: (token: string): Promise<Group[]> => request("/groups", token),
 
-  getMyStats: (token: string): Promise<{ groupId: string; groupName: string; amountDeposited: number }[]> => 
+  getMyStats: (token: string): Promise<{ stats: any[], currentUserId: string }> => 
     request("/groups/stats/me", token),
 
   getGroup: (token: string, groupId: string): Promise<Group> => request(`/groups/${groupId}`, token),
+
+  updateProfile: (token: string, name: string) =>
+    request("/users/me", token, { method: "PUT", body: JSON.stringify({ name }) }),
+
+  getNotifications: (token: string) => request("/notifications", token),
+
+  markNotificationsRead: (token: string, ids: string[]) =>
+    request("/notifications/read", token, { method: "POST", body: JSON.stringify({ ids }) }),
 
   createGroup: (token: string, body: { name: string; creditLimit: string; dailyLimit: number }) =>
     request("/groups", token, { method: "POST", body: JSON.stringify(body) }),
@@ -54,6 +62,15 @@ export const api = {
 
   deleteGroup: (token: string, groupId: string) =>
     request(`/groups/${groupId}`, token, { method: "DELETE" }),
+
+  proposeDelete: (token: string, groupId: string) =>
+    request(`/groups/${groupId}/propose-delete`, token, { method: "POST" }),
+
+  voteDelete: (token: string, groupId: string, body: { proposalId: string; approve: boolean }) =>
+    request(`/groups/${groupId}/vote-delete`, token, { method: "POST", body: JSON.stringify(body) }),
+
+  changeAdminLeave: (token: string, groupId: string, body: { newAdminId: string; newAdminWallet: string; nonce: number; signature: string }) =>
+    request(`/groups/${groupId}/change-admin-leave`, token, { method: "POST", body: JSON.stringify(body) }),
 
   updateGroup: (token: string, groupId: string, body: { name: string }) =>
     request(`/groups/${groupId}`, token, { method: "PATCH", body: JSON.stringify(body) }),

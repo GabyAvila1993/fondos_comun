@@ -3,7 +3,7 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { api } from "../lib/api";
 import { signTyped } from "../lib/eip712";
 import toast from "react-hot-toast";
-import type { Group, UserStats } from "../types";
+import type { Group, UserStats, NotificationHistory } from "../types";
 
 // Componentes
 import BottomNav, { Tab } from "./BottomNav";
@@ -24,6 +24,15 @@ export default function UserDashboard() {
   const [activeGroupId, setActiveGroupId] = useState<string>("");
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [forceGlobal, setForceGlobal] = useState(false);
+  const [notificationsHistory, setNotificationsHistory] = useState<NotificationHistory[]>([]);
+
+  const [readVotes, setReadVotes] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("monad_read_votes") || "[]");
+    } catch {
+      return [];
+    }
+  });
 
   // UI State
   const [sheetView, setSheetView] = useState<"new_group" | "deposit" | "spend" | "join_group" | "propose_limit" | null>(null);
@@ -48,12 +57,55 @@ export default function UserDashboard() {
       }
     };
 
+    const handleSocketVote = (e: Event) => {
+      const data = (e as CustomEvent).detail;
+      const currentDbUserId = localStorage.getItem("monad_dbUserId");
+      if (currentDbUserId && data.targetUserId === currentDbUserId) {
+        toast(data.message, {
+          icon: "🗳️",
+          style: { borderRadius: '10px', background: 'var(--card-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' },
+        });
+        if (data.groupId) fetchGroupDetails(data.groupId, 500);
+      }
+    };
+
+    const handleSocketGroupDeleted = (e: Event) => {
+      const data = (e as CustomEvent).detail;
+      const currentDbUserId = localStorage.getItem("monad_dbUserId");
+      if (currentDbUserId && data.targetUserId === currentDbUserId) {
+        toast(data.message, {
+          icon: "🗑️",
+          style: { borderRadius: '10px', background: 'var(--card-bg)', color: '#ff4444', border: '1px solid #ff4444' },
+        });
+        loadBasicData();
+      }
+    };
+
+    const handleSocketSystem = (e: Event) => {
+      const data = (e as CustomEvent).detail;
+      const currentDbUserId = localStorage.getItem("monad_dbUserId");
+      if (!data.targetUserId || (currentDbUserId && data.targetUserId === currentDbUserId)) {
+        toast(data.message, {
+          icon: "👋",
+          style: { borderRadius: '10px', background: 'var(--card-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' },
+        });
+        if (data.groupId) fetchGroupDetails(data.groupId, 500);
+        else loadBasicData();
+      }
+    };
+
     window.addEventListener("group_deleted_refresh", handleRefresh);
     window.addEventListener("refresh_group", handleRefreshGroup);
+    window.addEventListener("socket_vote", handleSocketVote);
+    window.addEventListener("socket_group_deleted", handleSocketGroupDeleted);
+    window.addEventListener("socket_system", handleSocketSystem);
     
     return () => {
       window.removeEventListener("group_deleted_refresh", handleRefresh);
       window.removeEventListener("refresh_group", handleRefreshGroup);
+      window.removeEventListener("socket_vote", handleSocketVote);
+      window.removeEventListener("socket_group_deleted", handleSocketGroupDeleted);
+      window.removeEventListener("socket_system", handleSocketSystem);
     };
   }, [user]);
 
@@ -65,25 +117,41 @@ export default function UserDashboard() {
       const basicGroups = await api.listGroups(token);
       
       setGroups(prev => {
-        return basicGroups.map(bg => {
+        return basicGroups.map((bg: any) => {
           const existing = prev.find(p => p.id === bg.id);
           return existing ? { ...existing, ...bg } : bg;
         });
       });
       
-      if (basicGroups.length > 0 && !activeGroupId) {
-        setActiveGroupId(basicGroups[0].id);
+      if (basicGroups.length > 0) {
+        if (basicGroups[0].currentUserId) {
+          localStorage.setItem("monad_dbUserId", basicGroups[0].currentUserId);
+        }
+        if (!activeGroupId) {
+          setActiveGroupId(basicGroups[0].id);
+        }
       }
 
       try {
         const statsData = await api.getMyStats(token);
-        const totalDeposited = statsData.reduce((acc, curr) => acc + curr.amountDeposited, 0);
+        // statsData is now { stats: any[], currentUserId: string }
+        if (statsData.currentUserId) {
+          localStorage.setItem("monad_dbUserId", statsData.currentUserId);
+        }
+        const totalDeposited = statsData.stats.reduce((acc: any, curr: any) => acc + curr.amountDeposited, 0);
         setUserStats({
           totalDeposited: String(totalDeposited),
-          groupsCount: statsData.length
+          groupsCount: statsData.stats.length
         });
       } catch (e) {
         console.warn("Could not load user stats", e);
+      }
+
+      try {
+        const historyData = await api.getNotifications(token);
+        setNotificationsHistory(historyData);
+      } catch (e) {
+        console.warn("Could not load notification history", e);
       }
 
       // Check for ?join=ID in URL
@@ -179,6 +247,7 @@ export default function UserDashboard() {
 
   const handleApprove = async (txId: number) => {
     if (!activeGroup) return;
+    let tid: string | undefined;
     try {
       const token = await getAccessToken();
       if (!token) return;
@@ -197,7 +266,7 @@ export default function UserDashboard() {
 
       const signature = await signTyped(embeddedWallet, "Vote", activeGroup.contractAddress, message);
 
-      const tid = toast.loading("Aprobando gasto...");
+      tid = toast.loading("Aprobando gasto...");
       const start = Date.now();
       await api.vote(token, activeGroup.id, {
         txId,
@@ -208,15 +277,17 @@ export default function UserDashboard() {
       const end = Date.now();
 
       toast.success(`¡Gasto aprobado en ${(end-start)/1000}s! ⚡️`, { id: tid });
+      setReadVotes(prev => [...prev, `tx-${txId}`]);
       fetchGroupDetails(activeGroup.id);
     } catch (err: any) {
       toast.error("Error al aprobar: " + err.message);
-      toast.dismiss();
+      toast.dismiss(tid);
     }
   };
 
   const handleReject = async (txId: number) => {
     if (!activeGroup) return;
+    let tid: string | undefined;
     try {
       const token = await getAccessToken();
       if (!token) return;
@@ -235,7 +306,7 @@ export default function UserDashboard() {
 
       const signature = await signTyped(embeddedWallet, "Vote", activeGroup.contractAddress, message);
 
-      const tid = toast.loading("Rechazando gasto...");
+      tid = toast.loading("Rechazando gasto...");
       const start = Date.now();
       await api.vote(token, activeGroup.id, {
         txId,
@@ -246,15 +317,17 @@ export default function UserDashboard() {
       const end = Date.now();
 
       toast.success(`¡Gasto rechazado en ${(end-start)/1000}s! ⚡️`, { id: tid });
+      setReadVotes(prev => [...prev, `tx-${txId}`]);
       fetchGroupDetails(activeGroup.id);
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
-      toast.dismiss();
+      toast.dismiss(tid);
     }
   };
 
   const handleApproveLimit = async (proposalId: number) => {
     if (!activeGroup) return;
+    let tid: string | undefined;
     try {
       const token = await getAccessToken();
       if (!token) return;
@@ -273,7 +346,7 @@ export default function UserDashboard() {
 
       const signature = await signTyped(embeddedWallet, "VoteLimit", activeGroup.contractAddress, message);
 
-      const tid = toast.loading("Aprobando cambio de límite...");
+      tid = toast.loading("Aprobando cambio de límite...");
       const start = Date.now();
       await api.voteLimitChange(token, activeGroup.id, {
         proposalId,
@@ -284,15 +357,17 @@ export default function UserDashboard() {
       const end = Date.now();
 
       toast.success(`¡Cambio de límite aprobado en ${(end-start)/1000}s! ⚡️`, { id: tid });
+      setReadVotes(prev => [...prev, `lim-${proposalId}`]);
       fetchGroupDetails(activeGroup.id);
     } catch (err: any) {
       toast.error("Error al aprobar: " + err.message);
-      toast.dismiss();
+      toast.dismiss(tid);
     }
   };
 
   const handleRejectLimit = async (proposalId: number) => {
     if (!activeGroup) return;
+    let tid: string | undefined;
     try {
       const token = await getAccessToken();
       if (!token) return;
@@ -311,7 +386,7 @@ export default function UserDashboard() {
 
       const signature = await signTyped(embeddedWallet, "VoteLimit", activeGroup.contractAddress, message);
 
-      const tid = toast.loading("Rechazando cambio de límite...");
+      tid = toast.loading("Rechazando cambio de límite...");
       const start = Date.now();
       await api.voteLimitChange(token, activeGroup.id, {
         proposalId,
@@ -322,10 +397,48 @@ export default function UserDashboard() {
       const end = Date.now();
 
       toast.success(`¡Cambio de límite rechazado en ${(end-start)/1000}s! ⚡️`, { id: tid });
+      setReadVotes(prev => [...prev, `lim-${proposalId}`]);
       fetchGroupDetails(activeGroup.id);
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
-      toast.dismiss();
+      toast.dismiss(tid);
+    }
+  };
+
+  const handleApproveDelete = async (proposalId: string) => {
+    if (!activeGroup) return;
+    let tid: string | undefined;
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+      tid = toast.loading("Aprobando eliminación...");
+      await api.voteDelete(token, activeGroup.id, { proposalId, approve: true });
+      toast.success("Eliminación aprobada", { id: tid });
+      setReadVotes(prev => [...prev, `del-${proposalId}`]);
+      fetchGroupDetails(activeGroup.id);
+      
+      // If it got deleted, refresh list
+      setTimeout(() => loadBasicData(), 1000);
+    } catch (err: any) {
+      toast.error("Error al aprobar: " + err.message);
+      toast.dismiss(tid);
+    }
+  };
+
+  const handleRejectDelete = async (proposalId: string) => {
+    if (!activeGroup) return;
+    let tid: string | undefined;
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+      tid = toast.loading("Rechazando eliminación...");
+      await api.voteDelete(token, activeGroup.id, { proposalId, approve: false });
+      toast.success("Eliminación rechazada", { id: tid });
+      setReadVotes(prev => [...prev, `del-${proposalId}`]);
+      fetchGroupDetails(activeGroup.id);
+    } catch (err: any) {
+      toast.error("Error al rechazar: " + err.message);
+      toast.dismiss(tid);
     }
   };
 
@@ -333,11 +446,21 @@ export default function UserDashboard() {
     try {
       const token = await getAccessToken();
       if (!token) return;
-      const tid = toast.loading("Eliminando grupo...");
-      await api.deleteGroup(token, groupId);
-      toast.success("Grupo eliminado", { id: tid });
-      setGroups(prev => prev.filter(g => g.id !== groupId));
-      if (activeGroupId === groupId) setActiveGroupId("");
+      const group = groups.find(g => g.id === groupId);
+      if (!group) return;
+
+      if (group.members && group.members.length > 1) {
+        const tid = toast.loading("Proponiendo eliminación...");
+        await api.proposeDelete(token, groupId);
+        toast.success("Propuesta de eliminación creada", { id: tid });
+        fetchGroupDetails(groupId);
+      } else {
+        const tid = toast.loading("Eliminando grupo...");
+        await api.deleteGroup(token, groupId);
+        toast.success("Grupo eliminado", { id: tid });
+        setGroups(prev => prev.filter(g => g.id !== groupId));
+        if (activeGroupId === groupId) setActiveGroupId("");
+      }
     } catch (err: any) {
       toast.error("Error al eliminar: " + err.message);
     }
@@ -356,6 +479,60 @@ export default function UserDashboard() {
     }
   };
 
+  const handleChangeAdminLeave = async (groupId: string, newAdminId: string, newAdminWallet: string) => {
+    if (!activeGroup) return;
+    let tid: string | undefined;
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+
+      const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+      if (!embeddedWallet) throw new Error("Wallet no encontrada");
+
+      const { nonce } = await api.getNonce(token, activeGroup.id);
+      
+      const message = {
+        currentAdmin: user?.wallet?.address,
+        newAdmin: newAdminWallet,
+        nonce: parseInt(nonce, 10)
+      };
+
+      tid = toast.loading("Firmando transferencia y salida...");
+      const signature = await signTyped(embeddedWallet, "ChangeAdmin", activeGroup.contractAddress, message);
+
+      toast.loading("Procesando salida...", { id: tid });
+      const start = Date.now();
+      await api.changeAdminLeave(token, activeGroup.id, {
+        newAdminId,
+        newAdminWallet,
+        nonce: parseInt(nonce, 10),
+        signature
+      });
+      const end = Date.now();
+
+      toast.success(`¡Transferencia completada en ${(end-start)/1000}s! ⚡️`, { id: tid });
+      
+      // Update UI immediately
+      setGroups(prev => prev.filter(g => g.id !== groupId));
+      setActiveGroupId("");
+      
+      // Removed from group, refresh full list
+      setTimeout(() => {
+        loadBasicData();
+      }, 1000);
+    } catch (err: any) {
+      toast.error("Error al transferir: " + err.message);
+      toast.dismiss(tid);
+    }
+  };
+
+  const pendingVotesCount = groups.reduce((acc, g) => {
+    const txs = (g.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`)).length;
+    const limits = (g.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`)).length;
+    const deletes = (g.deleteProposals || []).filter(p => p.status === "pending" && !readVotes.includes(`del-${p.id}`)).length;
+    return acc + txs + limits + deletes;
+  }, 0);
+
   return (
     <div className="app-container">
       <div className="main-content">
@@ -372,6 +549,7 @@ export default function UserDashboard() {
             onProposeLimit={() => setSheetView("propose_limit")}
             onDeleteGroup={handleDeleteGroup}
             onRenameGroup={handleRenameGroup}
+            onChangeAdminLeave={handleChangeAdminLeave}
             isLoadingDetails={isLoadingDetails}
           />
         )}
@@ -388,10 +566,13 @@ export default function UserDashboard() {
           <AprobacionesTab 
             group={activeGroup} 
             userAddress={user?.wallet?.address || ""} 
+            readVotes={readVotes}
             onApprove={handleApprove}
             onReject={handleReject}
             onApproveLimit={handleApproveLimit}
             onRejectLimit={handleRejectLimit}
+            onApproveDelete={handleApproveDelete}
+            onRejectDelete={handleRejectDelete}
           />
         )}
         {activeTab === "perfil" && (
@@ -399,12 +580,49 @@ export default function UserDashboard() {
             userAddress={user?.wallet?.address || ""} 
             userEmail={user?.google?.email || user?.email?.address || ""}
             stats={userStats} 
+            groups={groups}
+            readVotes={readVotes}
+            notificationsHistory={notificationsHistory}
+            onMarkAsRead={async (ids) => {
+              const newRead = [...new Set([...readVotes, ...ids])];
+              setReadVotes(newRead);
+              localStorage.setItem("monad_read_votes", JSON.stringify(newRead));
+              toast.success("Notificaciones marcadas como leídas");
+              
+              // Also mark DB notifications as read
+              const unreadDbIds = notificationsHistory.filter(n => !n.read).map(n => n.id);
+              if (unreadDbIds.length > 0) {
+                try {
+                  const token = await getAccessToken();
+                  if (token) await api.markNotificationsRead(token, unreadDbIds);
+                  setNotificationsHistory(prev => prev.map(n => ({...n, read: true})));
+                } catch(e) {
+                  console.error(e);
+                }
+              }
+            }}
+            onEditName={async (newName) => {
+              try {
+                const token = await getAccessToken();
+                if (token) await api.updateProfile(token, newName);
+              } catch (e) {
+                console.error("Error updating profile", e);
+              }
+            }}
+            onNavigateToVote={(groupId) => {
+              setActiveGroupId(groupId);
+              setActiveTab("aprobaciones");
+            }}
+            onNavigateToGroup={(groupId) => {
+              setActiveGroupId(groupId);
+              setActiveTab("inicio");
+            }}
             onLogout={logout} 
           />
         )}
       </div>
 
-      <BottomNav active={activeTab} onChange={(tab) => { setActiveTab(tab); if (tab === "movimientos") setForceGlobal(true); }} />
+      <BottomNav active={activeTab} pendingCount={pendingVotesCount} onChange={(tab) => { setActiveTab(tab); if (tab === "movimientos") setForceGlobal(true); }} />
 
       <Sheet isOpen={!!sheetView} onClose={() => { setSheetView(null); setJoinGroupData(undefined); }} title={
         sheetView === "new_group" ? "Crear Nuevo Grupo" : 

@@ -36,4 +36,13 @@ export class UsersService {
       .where("user.id IN (:...ids)", { ids })
       .getMany();
   }
+
+  async updateName(id: string, name: string) {
+    const user = await this.repo.findOne({ where: { id } });
+    if (user) {
+      user.name = name;
+      return this.repo.save(user);
+    }
+    return null;
+  }
 }

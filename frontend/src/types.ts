@@ -11,11 +11,14 @@ export interface Group {
   pending?: Tx[];
   limitProposals?: LimitProposal[];
   pendingLimitProposals?: LimitProposal[];
+  deleteProposals?: GroupDeleteProposal[];
   members?: string[];
   deposits?: Deposit[];
   creatorUserId?: string;
   isCreator?: boolean;
   blockchainDataLoaded?: boolean;
+  usersMap?: Record<string, {name?: string, email?: string, walletAddress?: string}>;
+  currentUserId?: string;
 }
 
 export interface Deposit {
@@ -52,4 +55,24 @@ export interface LimitProposal {
   votesFor: number;
   votesAgainst: number;
   createdAt: number;
+}
+
+export interface GroupDeleteProposal {
+  id: string;
+  groupId: string;
+  creatorUserId: string;
+  status: "pending" | "approved" | "rejected";
+  votes: { userId: string; approve: boolean }[];
+  createdAt: string;
+}
+
+export interface NotificationHistory {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  groupId?: string;
+  read: boolean;
+  createdAt: string;
 }

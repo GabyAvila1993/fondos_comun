@@ -2,7 +2,7 @@ import { House, ListDashes, CheckCircle, User, Link } from "@phosphor-icons/reac
 
 export type Tab = "inicio" | "movimientos" | "unirse" | "aprobaciones" | "perfil";
 
-export default function BottomNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
+export default function BottomNav({ active, pendingCount = 0, onChange }: { active: Tab; pendingCount?: number; onChange: (t: Tab) => void }) {
   return (
     <nav className="bottom-nav">
       <button className={`nav-item ${active === "inicio" ? "active" : ""}`} onClick={() => onChange("inicio")}>
@@ -20,6 +20,25 @@ export default function BottomNav({ active, onChange }: { active: Tab; onChange:
       <button className={`nav-item ${active === "aprobaciones" ? "active" : ""}`} onClick={() => onChange("aprobaciones")}>
         <div style={{ position: "relative" }}>
           <CheckCircle weight={active === "aprobaciones" ? "fill" : "regular"} />
+          {pendingCount > 0 && (
+            <div style={{
+              position: "absolute",
+              top: -6,
+              right: -10,
+              background: "red",
+              color: "white",
+              fontSize: "0.6rem",
+              fontWeight: "bold",
+              width: 16,
+              height: 16,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              {pendingCount}
+            </div>
+          )}
         </div>
         <span>Aprobaciones</span>
       </button>

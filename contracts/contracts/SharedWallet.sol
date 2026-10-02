@@ -83,6 +83,8 @@ contract SharedWallet {
         keccak256("ProposeLimit(address proposer,uint256 newLimit,uint256 nonce)");
     bytes32 public constant VOTE_LIMIT_TYPEHASH =
         keccak256("VoteLimit(address voter,uint256 id,bool approve,uint256 nonce)");
+    bytes32 public constant CHANGE_ADMIN_TYPEHASH =
+        keccak256("ChangeAdmin(address currentAdmin,address newAdmin,uint256 nonce)");
     bytes32 public immutable DOMAIN_SEPARATOR;
 
     Transaction[] private transactions;
@@ -97,6 +99,8 @@ contract SharedWallet {
     event LimitChangeRequested(uint256 indexed id, address indexed proposer, uint256 newLimit, uint256 votesNeeded);
     event LimitVoted(uint256 indexed id, address indexed voter, bool approve, uint256 votesFor, uint256 votesAgainst);
     event LimitChangeResolved(uint256 indexed id, bool approved, uint256 newLimit);
+    event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
+    event MemberLeft(address indexed member);
 
     modifier onlyMember() {
         require(members[msg.sender].active, "No sos miembro de este fondo");
@@ -457,6 +461,25 @@ contract SharedWallet {
             p.rejected = true;
             emit LimitChangeResolved(id, false, p.newLimit);
         }
+    }
+
+    function changeAdminAndLeaveFor(address currentAdmin, address newAdmin, uint256 nonce, bytes calldata signature) external onlyRelayer {
+        require(currentAdmin == admin, "No es admin");
+        require(members[currentAdmin].active, "Admin no es miembro");
+        require(members[newAdmin].active, "Nuevo admin no es miembro");
+        require(nonce == nonces[currentAdmin], "Nonce invalido");
+
+        bytes32 structHash = keccak256(abi.encode(CHANGE_ADMIN_TYPEHASH, currentAdmin, newAdmin, nonce));
+        require(_recoverSigner(_hashTypedData(structHash), signature) == currentAdmin, "Firma invalida");
+        nonces[currentAdmin] += 1;
+
+        // Transferir admin
+        admin = newAdmin;
+        emit AdminChanged(currentAdmin, newAdmin);
+
+        // Desactivar creador original
+        members[currentAdmin].active = false;
+        emit MemberLeft(currentAdmin);
     }
 }
 

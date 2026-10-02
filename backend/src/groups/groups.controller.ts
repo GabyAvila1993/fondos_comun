@@ -1,10 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Post, Patch, Req, UseGuards, BadRequestException } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Patch, Req, UseGuards, BadRequestException, NotFoundException } from "@nestjs/common";
 import { GroupsService } from "./groups.service";
 import { RelayerService } from "../relayer/relayer.service";
 import { UsersService } from "../users/users.service";
 import { PrivyAuthGuard } from "../auth/privy-auth.guard";
 import { PrivyService } from "../auth/privy.service";
-import { NotificationsGateway } from "../notifications/notifications.gateway";
+import { NotificationsService } from "../notifications/notifications.service";
 
 /**
  * Todos estos endpoints reciben la FIRMA que el usuario ya hizo en el
@@ -21,7 +21,7 @@ export class GroupsController {
     private relayer: RelayerService,
     private users: UsersService,
     private privy: PrivyService,
-    private notifications: NotificationsGateway,
+    private notifications: NotificationsService,
   ) {}
 
   /** Resuelve el usuario local (creandolo si es su primera vez) a partir del token de Privy. */
@@ -34,21 +34,28 @@ export class GroupsController {
   async list(@Req() req: any) {
     const user = await this.currentUser(req);
     const groups = await this.groups.findAllForUser(user.id);
-    return groups.map(g => ({ ...g, isCreator: g.creatorUserId === user.id }));
+    const result = [];
+    for (const g of groups) {
+      const deleteProposals = await this.groups.getDeleteProposalsForGroup(g.id);
+      result.push({ ...g, isCreator: g.creatorUserId === user.id, deleteProposals, currentUserId: user.id });
+    }
+    return result;
   }
 
   @Get("stats/me")
   async getMyStats(@Req() req: any) {
     const user = await this.currentUser(req);
-    return this.groups.getUserStats(user.id);
+    const stats = await this.groups.getUserStats(user.id);
+    return { stats, currentUserId: user.id };
   }
 
   @Get(":id")
   async getOne(@Req() req: any, @Param("id") groupId: string) {
     const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
+    if (!group) throw new NotFoundException("Grupo no encontrado");
     let state: any = {
-      name: group!.name,
+      name: group.name,
       creditLimit: "0",
       dailyLimit: 0,
       majorityNeeded: 0,
@@ -66,14 +73,15 @@ export class GroupsController {
     const deposits = await this.groups.getDepositsForGroup(group!.id);
     
     const memberUsers = await this.users.findMany(group!.members || []);
-    const usersMap: Record<string, {name?: string, email?: string}> = {};
+    const usersMap: Record<string, {name?: string, email?: string, walletAddress?: string}> = {};
     for (const u of memberUsers) {
-      usersMap[u.id] = { name: u.name, email: u.email };
+      usersMap[u.id] = { name: u.name, email: u.email, walletAddress: u.walletAddress };
       if (u.walletAddress) {
-        usersMap[u.walletAddress.toLowerCase()] = { name: u.name, email: u.email };
+        usersMap[u.walletAddress.toLowerCase()] = { name: u.name, email: u.email, walletAddress: u.walletAddress };
       }
     }
-    return { ...group, creatorUserId: group!.creatorUserId, ...state, name: group!.name, deposits, usersMap };
+    const deleteProposals = await this.groups.getDeleteProposalsForGroup(group!.id);
+    return { ...group, creatorUserId: group!.creatorUserId, ...state, name: group!.name, deposits, usersMap, deleteProposals };
   }
 
   /** Estado real del fondo, leído en vivo desde Monad: balance, límites y feed de movimientos. */
@@ -98,17 +106,18 @@ export class GroupsController {
       console.warn(`Could not fetch group state for ${group!.contractAddress}`);
     }
     const deposits = await this.groups.getDepositsForGroup(group!.id);
+    const deleteProposals = await this.groups.getDeleteProposalsForGroup(group!.id);
 
     const memberUsers = await this.users.findMany(group!.members || []);
-    const usersMap: Record<string, {name?: string, email?: string}> = {};
+    const usersMap: Record<string, {name?: string, email?: string, walletAddress?: string}> = {};
     for (const u of memberUsers) {
-      usersMap[u.id] = { name: u.name, email: u.email };
+      usersMap[u.id] = { name: u.name, email: u.email, walletAddress: u.walletAddress };
       if (u.walletAddress) {
-        usersMap[u.walletAddress.toLowerCase()] = { name: u.name, email: u.email };
+        usersMap[u.walletAddress.toLowerCase()] = { name: u.name, email: u.email, walletAddress: u.walletAddress };
       }
     }
 
-    return { id: group!.id, contractAddress: group!.contractAddress, creatorUserId: group!.creatorUserId, isCreator: group!.creatorUserId === user.id, ...onchain, name: group!.name, deposits, usersMap };
+    return { id: group!.id, contractAddress: group!.contractAddress, creatorUserId: group!.creatorUserId, isCreator: group!.creatorUserId === user.id, ...onchain, name: group!.name, deposits, deleteProposals, usersMap };
   }
 
   @Post()
@@ -136,6 +145,14 @@ export class GroupsController {
     const group = await this.groups.findOne(groupId);
     await this.relayer.joinGroup(group!.contractAddress, user.walletAddress, BigInt(body.nonce), body.signature);
     await this.groups.addMember(groupId, user.id);
+    
+    const userName = user.name || (user.email ? user.email.split('@')[0] : 'Alguien');
+    this.notifications.emitAndSave(groupId, "system", {
+      type: "system",
+      groupId: groupId,
+      message: `${userName} se ha unido al grupo.`
+    });
+    
     return { ok: true };
   }
 
@@ -148,7 +165,7 @@ export class GroupsController {
     await this.relayer.depositFiatAsOnchain(group!.contractAddress, body.fiatAmount);
     
     const userName = user.name || (user.email ? user.email.split('@')[0] : 'Alguien');
-    this.notifications.emitNotification(group!.id, "new_movement", {
+    this.notifications.emitAndSave(group!.id, "new_movement", {
       type: "deposit",
       message: `${userName} ingresó $${body.fiatAmount} al fondo común.`
     });
@@ -173,7 +190,7 @@ export class GroupsController {
       body.signature,
     );
 
-    this.notifications.emitNotification(group!.id, "new_movement", {
+    this.notifications.emitAndSave(group!.id, "new_movement", {
       type: "expense",
       message: `${user.email || user.name || 'Un miembro'} generó un gasto: ${body.desc} por $${Number(body.amountMon) * 1000}`
     });
@@ -191,7 +208,7 @@ export class GroupsController {
     const group = await this.groups.findOne(groupId);
     await this.relayer.vote(group!.contractAddress, user.walletAddress, body.txId, body.approve, BigInt(body.nonce), body.signature);
     
-    this.notifications.emitNotification(group!.id, "vote", {
+    this.notifications.emitAndSave(group!.id, "vote", {
       type: "vote",
       message: `${user.email || user.name || 'Un miembro'} votó ${body.approve ? 'a favor' : 'en contra'} del gasto #${body.txId}`
     });
@@ -215,7 +232,7 @@ export class GroupsController {
         BigInt(body.nonce),
         body.signature,
       );
-      this.notifications.emitNotification(group!.id, "limit_proposal", {
+      this.notifications.emitAndSave(group!.id, "limit_proposal", {
         type: "limit_proposal",
         message: `${user.email || user.name || 'El creador'} propuso un nuevo límite de retiro de $${body.newLimit}`,
       });
@@ -241,7 +258,7 @@ export class GroupsController {
       BigInt(body.nonce),
       body.signature,
     );
-    this.notifications.emitNotification(group!.id, "vote", {
+    this.notifications.emitAndSave(group!.id, "vote", {
       type: "vote",
       message: `${user.email || user.name || 'Un miembro'} votó ${body.approve ? 'a favor' : 'en contra'} del cambio de límite #${body.proposalId}`,
     });
@@ -252,6 +269,45 @@ export class GroupsController {
   async deleteGroup(@Req() req: any, @Param("id") groupId: string) {
     const user = await this.currentUser(req);
     return this.groups.remove(groupId, user.id);
+  }
+
+  @Post(":id/propose-delete")
+  async proposeDeleteGroup(@Req() req: any, @Param("id") groupId: string) {
+    const user = await this.currentUser(req);
+    const proposal = await this.groups.proposeDelete(groupId, user.id);
+    
+    this.notifications.emitAndSave(groupId, "system", {
+      type: "system",
+      message: `${user.email || user.name || 'El creador'} propuso eliminar el grupo.`,
+    });
+    
+    return proposal;
+  }
+
+  @Post(":id/vote-delete")
+  async voteDeleteGroup(@Req() req: any, @Param("id") groupId: string, @Body() body: { proposalId: string; approve: boolean }) {
+    const user = await this.currentUser(req);
+    const proposal = await this.groups.voteDelete(body.proposalId, user.id, body.approve);
+    
+    this.notifications.emitAndSave(groupId, "system", {
+      type: "system",
+      message: `${user.email || user.name || 'Un miembro'} votó ${body.approve ? 'a favor' : 'en contra'} de eliminar el grupo.`,
+    });
+    
+    return proposal;
+  }
+
+  @Post(":id/change-admin-leave")
+  async changeAdminLeave(@Req() req: any, @Param("id") groupId: string, @Body() body: { newAdminId: string; newAdminWallet: string; nonce: number; signature: string }) {
+    const user = await this.currentUser(req);
+    const group = await this.groups.changeAdminAndLeave(groupId, user.id, user.walletAddress!, body.newAdminId, body.newAdminWallet, body.nonce, body.signature);
+    
+    this.notifications.emitAndSave(groupId, "system", {
+      type: "system",
+      message: `${user.email || user.name || 'El creador anterior'} ha dejado el grupo y transferido la administración.`,
+    });
+    
+    return group;
   }
 
   @Patch(":id")

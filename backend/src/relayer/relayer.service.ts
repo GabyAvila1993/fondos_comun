@@ -254,4 +254,10 @@ export class RelayerService {
     const tx = await contract.voteLimitChangeFor(voterAddress, proposalId, approve, nonce, signature);
     return tx.wait();
   }
+
+  async changeAdminAndLeaveFor(groupAddress: string, currentAdmin: string, newAdminWallet: string, nonce: number, signature: string) {
+    const contract = this.groupContract(groupAddress);
+    const tx = await contract.changeAdminAndLeaveFor(currentAdmin, newAdminWallet, nonce, signature);
+    return tx.wait();
+  }
 }

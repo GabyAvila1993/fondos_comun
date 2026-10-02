@@ -30,32 +30,15 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     });
 
     s.on("vote", (data) => {
-      toast(data.message, {
-        icon: "🗳️",
-        style: {
-          borderRadius: '10px',
-          background: 'var(--card-bg)',
-          color: 'var(--text-color)',
-          border: '1px solid var(--border-color)',
-        },
-      });
-      if (data.groupId) {
-        window.dispatchEvent(new CustomEvent("refresh_group", { detail: data.groupId }));
-      }
+      window.dispatchEvent(new CustomEvent("socket_vote", { detail: data }));
     });
 
     s.on("group_deleted", (data) => {
-      toast(data.message, {
-        icon: "🗑️",
-        style: {
-          borderRadius: '10px',
-          background: 'var(--card-bg)',
-          color: '#ff4444',
-          border: '1px solid #ff4444',
-        },
-      });
-      // Emit a custom event so UserDashboard can reload data
-      window.dispatchEvent(new Event("group_deleted_refresh"));
+      window.dispatchEvent(new CustomEvent("socket_group_deleted", { detail: data }));
+    });
+
+    s.on("system", (data) => {
+      window.dispatchEvent(new CustomEvent("socket_system", { detail: data }));
     });
 
     return () => {

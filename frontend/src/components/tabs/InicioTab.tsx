@@ -15,17 +15,21 @@ interface InicioTabProps {
   onProposeLimit: () => void;
   onDeleteGroup: (id: string) => void;
   onRenameGroup: (id: string, newName: string) => void;
+  onChangeAdminLeave: (groupId: string, newAdminId: string, newAdminWallet: string) => void;
   isLoadingDetails?: boolean;
 }
 
 const fmt = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
 
-export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend, onProposeLimit, onDeleteGroup, onRenameGroup, isLoadingDetails }: InicioTabProps) {
+export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend, onProposeLimit, onDeleteGroup, onRenameGroup, onChangeAdminLeave, isLoadingDetails }: InicioTabProps) {
   const activeGroup = groups.find((g) => g.id === activeGroupId);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
   const [groupToRename, setGroupToRename] = useState<Group | null>(null);
   const [fiatToMonRate, setFiatToMonRate] = useState(1000);
+  
+  const [selectedNewAdminId, setSelectedNewAdminId] = useState<string>("");
+  const [newAdminConfirmed, setNewAdminConfirmed] = useState(false);
 
   // Mantenemos la tasa de cambio actualizada para mostrar límites en ARS
   useEffect(() => {
@@ -88,7 +92,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
                       setIsDropdownOpen(false);
                     }} style={{ flexGrow: 1 }}>{getGroupName(g)}</span>
                     
-                    {g.isCreator && (
+                    {g.isCreator && !g.deleteProposals?.some(p => p.status === "pending" || p.status === "rejected") && (
                       <Trash 
                         weight="fill" 
                         size={20} 
@@ -136,6 +140,8 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
         )}
       </div>
 
+
+
       {/* Quick Actions */}
       <div className="quick-actions-card">
         <button className="action-btn" onClick={onDeposit}>
@@ -155,6 +161,74 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
           <span>Crear nuevo grupo</span>
         </button>
       </div>
+      {/* Alerta de Votación de Eliminación Denegada */}
+      {activeGroup && activeGroup.isCreator && (activeGroup.deleteProposals || []).some(p => p.status === "rejected") && (
+        <div style={{ background: "#fef2f2", margin: "0 20px 20px 20px", padding: "16px", borderRadius: "12px", border: "1px solid #fecaca" }}>
+          <h4 style={{ color: "#991b1b", marginTop: 0, marginBottom: "8px" }}>Los participantes no quieren eliminar el grupo {getGroupName(activeGroup)}</h4>
+          <p style={{ color: "#b91c1c", fontSize: "0.9rem", marginBottom: "16px" }}>
+            Si vos te querés ir podés hacerlo transfiriendo el grupo a uno de los integrantes.
+          </p>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <select 
+              className="form-input" 
+              style={{ background: "white" }}
+              value={selectedNewAdminId}
+              onChange={(e) => {
+                setSelectedNewAdminId(e.target.value);
+                setNewAdminConfirmed(false);
+              }}
+            >
+              <option value="">Seleccionar nuevo administrador...</option>
+              {activeGroup.members?.filter(m => m !== userId).map(memberId => (
+                <option key={memberId} value={memberId}>
+                  {activeGroup.usersMap?.[memberId]?.name || (activeGroup.usersMap?.[memberId]?.email ? activeGroup.usersMap[memberId].email!.split('@')[0] : `Usuario ${memberId.substring(0,6)}...`)}
+                </option>
+              ))}
+            </select>
+            
+            {!newAdminConfirmed ? (
+              <button 
+                className="btn-outline"
+                disabled={!selectedNewAdminId}
+                onClick={() => setNewAdminConfirmed(true)}
+                style={{ opacity: !selectedNewAdminId ? 0.5 : 1 }}
+              >
+                Confirmar nuevo admin
+              </button>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  className="btn-outline"
+                  onClick={() => setNewAdminConfirmed(false)}
+                  style={{ flex: 1 }}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  className="btn-primary"
+                  onClick={() => {
+                    const wallet = activeGroup.usersMap?.[selectedNewAdminId]?.walletAddress;
+                    if (!wallet) {
+                      toast.error("El usuario seleccionado no tiene una wallet válida.");
+                      return;
+                    }
+                    onChangeAdminLeave(activeGroup.id, selectedNewAdminId, wallet);
+                  }}
+                  style={{ 
+                    flex: 1,
+                    background: "#dc2626",
+                    color: "white",
+                    border: "none"
+                  }}
+                >
+                  Salir del grupo
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Tus Grupos */}
       <div className="card" style={{ padding: "0" }}>
@@ -218,12 +292,22 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
       {/* Modals */}
       <Sheet isOpen={!!groupToDelete} onClose={() => setGroupToDelete(null)} title="Eliminar grupo">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <p style={{ color: 'var(--text-muted)' }}>
-            ¿Estás seguro que deseas eliminar el grupo <strong>{groupToDelete ? getGroupName(groupToDelete) : ''}</strong>?
-          </p>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>
-            Esta acción no se puede deshacer y todos los miembros perderán el acceso.
-          </p>
+          {groupToDelete && groupToDelete.members && groupToDelete.members.length > 1 ? (
+            <p style={{ color: 'var(--text-muted)' }}>
+              ¿Estás seguro que deseas eliminar el grupo <strong>{getGroupName(groupToDelete)}</strong>?
+              <br/><br/>
+              El grupo tiene otros miembros. Se abrirá una votación para eliminarlo.
+            </p>
+          ) : (
+            <>
+              <p style={{ color: 'var(--text-muted)' }}>
+                ¿Estás seguro que deseas eliminar el grupo <strong>{groupToDelete ? getGroupName(groupToDelete) : ''}</strong>?
+              </p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9em' }}>
+                Esta acción no se puede deshacer y todos los miembros perderán el acceso.
+              </p>
+            </>
+          )}
           <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
             <button 
               onClick={() => setGroupToDelete(null)}
@@ -240,7 +324,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
               }}
               style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: '#ff4444', color: 'white', fontWeight: 600, cursor: 'pointer' }}
             >
-              Eliminar
+              {groupToDelete && groupToDelete.members && groupToDelete.members.length > 1 ? "Abrir votación" : "Eliminar"}
             </button>
           </div>
         </div>
