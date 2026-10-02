@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import { PrivyProvider } from "@privy-io/react-auth";
 import App from "./App";
 import { ENV } from "./env";
-import "./styles/app.css";
+import "./compartido/estilos/app.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

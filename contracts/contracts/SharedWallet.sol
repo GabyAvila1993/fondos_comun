@@ -165,8 +165,18 @@ contract SharedWallet {
         }
     }
 
+    function _activeMemberCount() internal view returns (uint256) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < memberList.length; i++) {
+            if (members[memberList[i]].active) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     function majorityNeeded() public view returns (uint256) {
-        uint256 m = memberList.length;
+        uint256 m = _activeMemberCount();
         if (m <= 1) return 0;
         if (m == 2) return 1;
         return ((m - 1) / 2) + 1;
