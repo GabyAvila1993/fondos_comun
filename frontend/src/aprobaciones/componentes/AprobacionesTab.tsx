@@ -4,19 +4,18 @@ import { Check, X, HandCoins } from "@phosphor-icons/react";
 import { fmt } from "../../compartido/lib/utils";
 
 interface AprobacionesTabProps {
-  group: Group | undefined;
+  groups: Group[];
   userAddress: string;
-  onApprove: (txId: number) => void;
-  onReject: (txId: number) => void;
-  onApproveLimit: (proposalId: number) => void;
-  onRejectLimit: (proposalId: number) => void;
-  onApproveDelete: (proposalId: string) => void;
-  onRejectDelete: (proposalId: string) => void;
+  onApprove: (groupId: string, txId: number) => void;
+  onReject: (groupId: string, txId: number) => void;
+  onApproveLimit: (groupId: string, proposalId: number) => void;
+  onRejectLimit: (groupId: string, proposalId: number) => void;
+  onApproveDelete: (groupId: string, proposalId: string) => void;
+  onRejectDelete: (groupId: string, proposalId: string) => void;
   readVotes: string[];
 }
 
-
-export default function AprobacionesTab({ group, userAddress, onApprove, onReject, onApproveLimit, onRejectLimit, onApproveDelete, onRejectDelete, readVotes }: AprobacionesTabProps) {
+export default function AprobacionesTab({ groups, userAddress, onApprove, onReject, onApproveLimit, onRejectLimit, onApproveDelete, onRejectDelete, readVotes }: AprobacionesTabProps) {
   const [rate, setRate] = useState(1000);
 
   useEffect(() => {
@@ -28,18 +27,29 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
       .catch(console.error);
   }, []);
 
-  if (!group) return <div className="text-center text-muted" style={{ padding: "40px 20px" }}>Selecciona un grupo para ver sus aprobaciones pendientes.</div>;
+  if (!groups || groups.length === 0) return <div className="text-center text-muted" style={{ padding: "40px 20px" }}>No perteneces a ningún grupo aún.</div>;
 
   const getGroupName = (g: Group) => g.editedName || g.name;
 
-  const pendingTxs = (group.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`));
-  const pendingLimits = (group.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`));
-  const pendingDeletes = (group.deleteProposals || []).filter(p => p.status === "pending" && !readVotes.includes(`del-${p.id}`));
-  
-  const limit = Number(group.creditLimit);
-  const totalMembers = group.members?.length || 1;
-  const requiredVotes = Math.floor(totalMembers / 2) + 1;
-  const deleteRequiredVotes = Math.floor((totalMembers - 1) / 2) + 1;
+  const allPendingDeletes: any[] = [];
+  const allPendingLimits: any[] = [];
+  const allPendingTxs: any[] = [];
+
+  for (const g of groups) {
+    const limit = Number(g.creditLimit);
+    const totalMembers = g.members?.length || 1;
+    const requiredVotes = Math.floor(totalMembers / 2) + 1;
+    const deleteRequiredVotes = Math.floor((totalMembers - 1) / 2) + 1;
+    const groupName = getGroupName(g);
+
+    const pendingDel = (g.deleteProposals || []).filter(p => p.status === "pending" && !readVotes.includes(`del-${p.id}`)).map(p => ({...p, groupId: g.id, groupName, deleteRequiredVotes}));
+    const pendingLim = (g.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`)).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit}));
+    const pendingTx = (g.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`)).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit}));
+
+    allPendingDeletes.push(...pendingDel);
+    allPendingLimits.push(...pendingLim);
+    allPendingTxs.push(...pendingTx);
+  }
 
   return (
     <div>
@@ -51,15 +61,15 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
       
       <div style={{ background: "var(--bg-color)", padding: "16px 20px" }}>
         <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "16px" }}>
-          Solicitudes pendientes en {getGroupName(group)}
+          Solicitudes pendientes de todos tus grupos
         </div>
 
-        {pendingDeletes.map((proposal, idx) => {
+        {allPendingDeletes.map((proposal, idx) => {
           let votesFor = 0;
           for (const v of proposal.votes) {
             if (v.approve) votesFor++;
           }
-          const percent = Math.min((votesFor / deleteRequiredVotes) * 100, 100);
+          const percent = Math.min((votesFor / proposal.deleteRequiredVotes) * 100, 100);
 
           return (
             <div className="approval-card" key={`delete-${idx}`}>
@@ -70,7 +80,7 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
                   </div>
                   <div>
                     <div style={{ fontWeight: 600 }}>El administrador solicitó</div>
-                    <div className="approval-time">Eliminar el grupo</div>
+                    <div className="approval-time">Eliminar el grupo <b>{proposal.groupName}</b></div>
                   </div>
                 </div>
                 <div className="approval-role" style={{ background: "#fef2f2", color: "#991b1b" }}>PELIGRO</div>
@@ -81,7 +91,7 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
                 
                 <div className="approval-progress">
                   <div className="progress-info">
-                    <span>{votesFor} de {deleteRequiredVotes} aprobaciones necesarias</span>
+                    <span>{votesFor} de {proposal.deleteRequiredVotes} aprobaciones necesarias</span>
                     <span style={{ fontWeight: 600 }}>{Math.round(percent)}%</span>
                   </div>
                   <div className="progress-bar">
@@ -93,14 +103,14 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
               <div className="approval-actions">
                 <button 
                   className="approval-btn reject" 
-                  onClick={() => onRejectDelete(proposal.id)}
+                  onClick={() => onRejectDelete(proposal.groupId, proposal.id)}
                 >
                   <X weight="bold" size={18} /> Rechazar
                 </button>
                 <button 
                   className="approval-btn approve"
                   style={{ background: "var(--danger)", color: "white" }}
-                  onClick={() => onApproveDelete(proposal.id)}
+                  onClick={() => onApproveDelete(proposal.groupId, proposal.id)}
                 >
                   <Check weight="bold" size={18} /> Aprobar Eliminación
                 </button>
@@ -109,10 +119,10 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
           );
         })}
 
-        {pendingLimits.map((tx, idx) => {
+        {allPendingLimits.map((tx, idx) => {
           const newLimit = Number(tx.newLimit);
           const votesCount = tx.votesFor;
-          const percent = Math.min((votesCount / requiredVotes) * 100, 100);
+          const percent = Math.min((votesCount / tx.requiredVotes) * 100, 100);
 
           return (
             <div className="approval-card" key={`limit-${idx}`}>
@@ -123,7 +133,7 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
                   </div>
                   <div>
                     <div style={{ fontWeight: 600 }}>Miembro {tx.proposer.substring(0, 6)}...</div>
-                    <div className="approval-time">Creador del grupo</div>
+                    <div className="approval-time">Grupo: <b>{tx.groupName}</b></div>
                   </div>
                 </div>
                 <div className="approval-role" style={{ background: "#f0fdf4", color: "#166534" }}>NUEVO LÍMITE</div>
@@ -139,13 +149,13 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div className="approval-amount-label">Límite Actual</div>
-                    <div className="approval-amount-value">{fmt(limit * rate)}</div>
+                    <div className="approval-amount-value">{fmt(tx.limit * rate)}</div>
                   </div>
                 </div>
 
                 <div className="approval-progress">
                   <div className="progress-info">
-                    <span>{votesCount} de {requiredVotes} aprobaciones necesarias</span>
+                    <span>{votesCount} de {tx.requiredVotes} aprobaciones necesarias</span>
                     <span style={{ fontWeight: 600 }}>{Math.round(percent)}%</span>
                   </div>
                   <div className="progress-bar">
@@ -157,13 +167,13 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
               <div className="approval-actions">
                 <button 
                   className="approval-btn reject" 
-                  onClick={() => onRejectLimit(tx.id)}
+                  onClick={() => onRejectLimit(tx.groupId, tx.id)}
                 >
                   <X weight="bold" size={18} /> Rechazar
                 </button>
                 <button 
                   className="approval-btn approve"
-                  onClick={() => onApproveLimit(tx.id)}
+                  onClick={() => onApproveLimit(tx.groupId, tx.id)}
                 >
                   <Check weight="bold" size={18} /> Aprobar
                 </button>
@@ -172,11 +182,11 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
           );
         })}
 
-        {pendingTxs.map((tx, idx) => {
+        {allPendingTxs.map((tx, idx) => {
           const amount = Number(tx.amount);
-          const exceed = amount > limit;
+          const exceed = amount > tx.limit;
           const votesCount = tx.votesFor;
-          const percent = Math.min((votesCount / requiredVotes) * 100, 100);
+          const percent = Math.min((votesCount / tx.requiredVotes) * 100, 100);
 
           return (
             <div className="approval-card" key={idx}>
@@ -187,7 +197,7 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
                   </div>
                   <div>
                     <div style={{ fontWeight: 600 }}>Miembro {tx.proposer.substring(0, 6)}...</div>
-                    <div className="approval-time">{new Date(tx.createdAt).toLocaleDateString()}</div>
+                    <div className="approval-time">{new Date(tx.createdAt).toLocaleDateString()} - <b>{tx.groupName}</b></div>
                   </div>
                 </div>
                 <div className="approval-role">PROPIETARIO</div>
@@ -205,7 +215,7 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
                     <div style={{ textAlign: "right" }}>
                       <div className="approval-amount-label">Excedente Libre</div>
                       <div className="approval-amount-exceed">
-                        {fmt((amount - limit) * 1000)} <HandCoins weight="fill" size={16} />
+                        {fmt((amount - tx.limit) * 1000)} <HandCoins weight="fill" size={16} />
                       </div>
                     </div>
                   )}
@@ -214,7 +224,7 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
                 <div className="approval-progress">
                   <div className="progress-header">
                     <span>Votos Recibidos</span>
-                    <span>{votesCount} / {requiredVotes}</span>
+                    <span>{votesCount} / {tx.requiredVotes}</span>
                   </div>
                   <div className="progress-bar-bg">
                     <div className="progress-bar-fill" style={{ width: `${percent}%` }}></div>
@@ -226,10 +236,10 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
               </div>
 
               <div className="approval-actions">
-                <button className="btn-outline" style={{ display: "flex", gap: "8px", justifyContent: "center", color: "var(--danger)", borderColor: "var(--danger)" }} onClick={() => onReject(tx.id)}>
+                <button className="btn-outline" style={{ display: "flex", gap: "8px", justifyContent: "center", color: "var(--danger)", borderColor: "var(--danger)" }} onClick={() => onReject(tx.groupId, tx.id)}>
                   <X weight="bold" /> Rechazar
                 </button>
-                <button className="btn-primary" style={{ display: "flex", gap: "8px", justifyContent: "center" }} onClick={() => onApprove(tx.id)}>
+                <button className="btn-primary" style={{ display: "flex", gap: "8px", justifyContent: "center" }} onClick={() => onApprove(tx.groupId, tx.id)}>
                   <Check weight="bold" /> Aprobar
                 </button>
               </div>
@@ -237,8 +247,8 @@ export default function AprobacionesTab({ group, userAddress, onApprove, onRejec
           );
         })}
 
-        {pendingTxs.length === 0 && pendingLimits.length === 0 && pendingDeletes.length === 0 && (
-          <div className="text-center text-muted" style={{ padding: "40px 0" }}>No hay solicitudes pendientes en este momento.</div>
+        {allPendingTxs.length === 0 && allPendingLimits.length === 0 && allPendingDeletes.length === 0 && (
+          <div className="text-center text-muted" style={{ padding: "40px 0" }}>No hay solicitudes pendientes en ninguno de tus grupos en este momento.</div>
         )}
       </div>
     </div>

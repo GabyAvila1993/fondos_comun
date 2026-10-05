@@ -1,4 +1,4 @@
-# Fondo Comun
+﻿# Fondo Comun
 
 Fondo Comun es una aplicacion web que cree para que grupos de personas (como amigos, familiares o companeros de oficina) puedan juntar dinero en un pozo compartido de forma totalmente transparente y segura. La idea es que podamos guardar ese dinero en dolares digitales (USDC) utilizando la red Monad y gestionar todos los gastos de forma grupal, mediante un sistema de votaciones. Lo mejor de todo es que nadie necesita saber absolutamente nada de criptomonedas ni pagar comisiones extrañas; la plataforma se encarga de toda esa complejidad por detras.
 
@@ -86,3 +86,6 @@ Para iniciar la aplicacion web, ejecuta:
 npm run dev
 
 ¡Y listo! Ya podes entrar a la direccion que te indique la consola y empezar a usar Fondo Comun.
+
+### Declaración de Uso de Inteligencia Artificial (Hackathon Rules)
+En cumplimiento con las reglas del hackathon Monad Metropolis (Tip 10 de las bases legales), declaramos formalmente que el desarrollo de este código ha sido asistido por herramientas de Inteligencia Artificial (LLMs). Las herramientas de IA se han utilizado para asistir en la estructuración del proyecto, la generación de interfaces, revisión de lógica de smart contracts y depuración de errores (debugging). Todo el diseño de producto, arquitectura general, lógica de negocio central y toma de decisiones pertenecen exclusivamente a los autores humanos del proyecto.

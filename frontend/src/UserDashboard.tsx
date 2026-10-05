@@ -260,8 +260,10 @@ export default function UserDashboard() {
     }
   };
 
-  const handleApprove = async (txId: number) => {
-    if (!activeGroup) return;
+  const handleApprove = async (groupId: string, txId: number) => {
+    const targetGroup = groups.find(g => g.id === groupId);
+    if (!targetGroup) return;
+    
     let tid: string | undefined;
     try {
       const token = await getAccessToken();
@@ -270,7 +272,7 @@ export default function UserDashboard() {
       const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
       if (!embeddedWallet) throw new Error("Wallet no encontrada");
 
-      const { nonce } = await api.getNonce(token, activeGroup.id);
+      const { nonce } = await api.getNonce(token, targetGroup.id);
       
       const message = {
         voter: user?.wallet?.address,
@@ -279,11 +281,11 @@ export default function UserDashboard() {
         nonce: parseInt(nonce, 10),
       };
 
-      const signature = await signTyped(embeddedWallet, "Vote", activeGroup.contractAddress, message);
+      const signature = await signTyped(embeddedWallet, "Vote", targetGroup.contractAddress, message);
 
       tid = toast.loading("Aprobando gasto...");
       const start = Date.now();
-      await api.vote(token, activeGroup.id, {
+      await api.vote(token, targetGroup.id, {
         txId,
         approve: true,
         nonce,
@@ -293,15 +295,17 @@ export default function UserDashboard() {
 
       toast.success(`¡Gasto aprobado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       setReadVotes(prev => [...prev, `tx-${txId}`]);
-      fetchGroupDetails(activeGroup.id);
+      fetchGroupDetails(targetGroup.id);
     } catch (err: any) {
       toast.error("Error al aprobar: " + err.message);
       toast.dismiss(tid);
     }
   };
 
-  const handleReject = async (txId: number) => {
-    if (!activeGroup) return;
+  const handleReject = async (groupId: string, txId: number) => {
+    const targetGroup = groups.find(g => g.id === groupId);
+    if (!targetGroup) return;
+    
     let tid: string | undefined;
     try {
       const token = await getAccessToken();
@@ -310,7 +314,7 @@ export default function UserDashboard() {
       const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
       if (!embeddedWallet) throw new Error("Wallet no encontrada");
 
-      const { nonce } = await api.getNonce(token, activeGroup.id);
+      const { nonce } = await api.getNonce(token, targetGroup.id);
       
       const message = {
         voter: user?.wallet?.address,
@@ -319,11 +323,11 @@ export default function UserDashboard() {
         nonce: parseInt(nonce, 10),
       };
 
-      const signature = await signTyped(embeddedWallet, "Vote", activeGroup.contractAddress, message);
+      const signature = await signTyped(embeddedWallet, "Vote", targetGroup.contractAddress, message);
 
       tid = toast.loading("Rechazando gasto...");
       const start = Date.now();
-      await api.vote(token, activeGroup.id, {
+      await api.vote(token, targetGroup.id, {
         txId,
         approve: false,
         nonce,
@@ -333,15 +337,17 @@ export default function UserDashboard() {
 
       toast.success(`¡Gasto rechazado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       setReadVotes(prev => [...prev, `tx-${txId}`]);
-      fetchGroupDetails(activeGroup.id);
+      fetchGroupDetails(targetGroup.id);
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
       toast.dismiss(tid);
     }
   };
 
-  const handleApproveLimit = async (proposalId: number) => {
-    if (!activeGroup) return;
+  const handleApproveLimit = async (groupId: string, proposalId: number) => {
+    const targetGroup = groups.find(g => g.id === groupId);
+    if (!targetGroup) return;
+    
     let tid: string | undefined;
     try {
       const token = await getAccessToken();
@@ -350,7 +356,7 @@ export default function UserDashboard() {
       const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
       if (!embeddedWallet) throw new Error("Wallet no encontrada");
 
-      const { nonce } = await api.getNonce(token, activeGroup.id);
+      const { nonce } = await api.getNonce(token, targetGroup.id);
       
       const message = {
         voter: user?.wallet?.address,
@@ -359,11 +365,11 @@ export default function UserDashboard() {
         nonce: parseInt(nonce, 10)
       };
 
-      const signature = await signTyped(embeddedWallet, "VoteLimit", activeGroup.contractAddress, message);
+      const signature = await signTyped(embeddedWallet, "VoteLimit", targetGroup.contractAddress, message);
 
       tid = toast.loading("Aprobando cambio de límite...");
       const start = Date.now();
-      await api.voteLimitChange(token, activeGroup.id, {
+      await api.voteLimitChange(token, targetGroup.id, {
         proposalId,
         approve: true,
         nonce,
@@ -373,15 +379,17 @@ export default function UserDashboard() {
 
       toast.success(`¡Cambio de límite aprobado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       setReadVotes(prev => [...prev, `lim-${proposalId}`]);
-      fetchGroupDetails(activeGroup.id);
+      fetchGroupDetails(targetGroup.id);
     } catch (err: any) {
       toast.error("Error al aprobar: " + err.message);
       toast.dismiss(tid);
     }
   };
 
-  const handleRejectLimit = async (proposalId: number) => {
-    if (!activeGroup) return;
+  const handleRejectLimit = async (groupId: string, proposalId: number) => {
+    const targetGroup = groups.find(g => g.id === groupId);
+    if (!targetGroup) return;
+    
     let tid: string | undefined;
     try {
       const token = await getAccessToken();
@@ -390,7 +398,7 @@ export default function UserDashboard() {
       const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
       if (!embeddedWallet) throw new Error("Wallet no encontrada");
 
-      const { nonce } = await api.getNonce(token, activeGroup.id);
+      const { nonce } = await api.getNonce(token, targetGroup.id);
       
       const message = {
         voter: user?.wallet?.address,
@@ -399,11 +407,11 @@ export default function UserDashboard() {
         nonce: parseInt(nonce, 10)
       };
 
-      const signature = await signTyped(embeddedWallet, "VoteLimit", activeGroup.contractAddress, message);
+      const signature = await signTyped(embeddedWallet, "VoteLimit", targetGroup.contractAddress, message);
 
       tid = toast.loading("Rechazando cambio de límite...");
       const start = Date.now();
-      await api.voteLimitChange(token, activeGroup.id, {
+      await api.voteLimitChange(token, targetGroup.id, {
         proposalId,
         approve: false,
         nonce,
@@ -413,24 +421,26 @@ export default function UserDashboard() {
 
       toast.success(`¡Cambio de límite rechazado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       setReadVotes(prev => [...prev, `lim-${proposalId}`]);
-      fetchGroupDetails(activeGroup.id);
+      fetchGroupDetails(targetGroup.id);
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
       toast.dismiss(tid);
     }
   };
 
-  const handleApproveDelete = async (proposalId: string) => {
-    if (!activeGroup) return;
+  const handleApproveDelete = async (groupId: string, proposalId: string) => {
+    const targetGroup = groups.find(g => g.id === groupId);
+    if (!targetGroup) return;
+    
     let tid: string | undefined;
     try {
       const token = await getAccessToken();
       if (!token) return;
       tid = toast.loading("Aprobando eliminación...");
-      await api.voteDelete(token, activeGroup.id, { proposalId, approve: true });
+      await api.voteDelete(token, targetGroup.id, { proposalId, approve: true });
       toast.success("Eliminación aprobada", { id: tid });
       setReadVotes(prev => [...prev, `del-${proposalId}`]);
-      fetchGroupDetails(activeGroup.id);
+      fetchGroupDetails(targetGroup.id);
       
       // If it got deleted, refresh list
       setTimeout(() => loadBasicData(), 1000);
@@ -440,17 +450,19 @@ export default function UserDashboard() {
     }
   };
 
-  const handleRejectDelete = async (proposalId: string) => {
-    if (!activeGroup) return;
+  const handleRejectDelete = async (groupId: string, proposalId: string) => {
+    const targetGroup = groups.find(g => g.id === groupId);
+    if (!targetGroup) return;
+    
     let tid: string | undefined;
     try {
       const token = await getAccessToken();
       if (!token) return;
       tid = toast.loading("Rechazando eliminación...");
-      await api.voteDelete(token, activeGroup.id, { proposalId, approve: false });
+      await api.voteDelete(token, targetGroup.id, { proposalId, approve: false });
       toast.success("Eliminación rechazada", { id: tid });
       setReadVotes(prev => [...prev, `del-${proposalId}`]);
-      fetchGroupDetails(activeGroup.id);
+      fetchGroupDetails(targetGroup.id);
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
       toast.dismiss(tid);
@@ -580,7 +592,7 @@ export default function UserDashboard() {
         )}
         {activeTab === "aprobaciones" && (
           <AprobacionesTab 
-            group={activeGroup} 
+            groups={groups} 
             userAddress={user?.wallet?.address || ""} 
             readVotes={readVotes}
             onApprove={handleApprove}
