@@ -42,10 +42,12 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
     const requiredVotes = Math.floor(totalMembers / 2) + 1;
     const deleteRequiredVotes = Math.floor((totalMembers - 1) / 2) + 1;
     const groupName = getGroupName(g);
+    
+    const myWallet = (g.usersMap?.[userId]?.walletAddress || userAddress || "").toLowerCase();
 
     const pendingDel = (g.deleteProposals || []).filter(p => p.status === "pending" && !readVotes.includes(`del-${p.id}`) && p.creatorUserId !== userId).map(p => ({...p, groupId: g.id, groupName, deleteRequiredVotes}));
-    const pendingLim = (g.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`) && p.proposer?.toLowerCase() !== userAddress?.toLowerCase()).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit}));
-    const pendingTx = (g.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`) && p.proposer?.toLowerCase() !== userAddress?.toLowerCase()).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit}));
+    const pendingLim = (g.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`) && p.proposer?.toLowerCase() !== myWallet).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit, usersMap: g.usersMap}));
+    const pendingTx = (g.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`) && p.proposer?.toLowerCase() !== myWallet).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit, usersMap: g.usersMap}));
 
     allPendingDeletes.push(...pendingDel);
     allPendingLimits.push(...pendingLim);
@@ -133,7 +135,7 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
                     {tx.proposer.substring(2,4).toUpperCase()}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 600 }}>Miembro {tx.proposer.substring(0, 6)}...</div>
+                    <div style={{ fontWeight: 600 }}>{tx.usersMap?.[tx.proposer.toLowerCase()]?.name || (tx.usersMap?.[tx.proposer.toLowerCase()]?.email ? tx.usersMap?.[tx.proposer.toLowerCase()]?.email.split('@')[0] : `Miembro ${tx.proposer.substring(0, 6)}...`)}</div>
                     <div className="approval-time">Grupo: <b>{tx.groupName}</b></div>
                   </div>
                 </div>
@@ -197,7 +199,7 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
                     {tx.proposer.substring(2,4).toUpperCase()}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 600 }}>Miembro {tx.proposer.substring(0, 6)}...</div>
+                    <div style={{ fontWeight: 600 }}>{tx.usersMap?.[tx.proposer.toLowerCase()]?.name || (tx.usersMap?.[tx.proposer.toLowerCase()]?.email ? tx.usersMap?.[tx.proposer.toLowerCase()]?.email.split('@')[0] : `Miembro ${tx.proposer.substring(0, 6)}...`)}</div>
                     <div className="approval-time">{new Date(tx.createdAt).toLocaleDateString()} - <b>{tx.groupName}</b></div>
                   </div>
                 </div>

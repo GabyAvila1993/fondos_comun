@@ -155,12 +155,12 @@ export class GroupsController {
     const group = await this.groups.findOne(groupId);
     await this.relayer.joinGroup(group!.contractAddress, user.walletAddress, BigInt(body.nonce), body.signature);
     await this.groups.addMember(groupId, user.id);
-    
+    const updatedGroup = await this.groups.findOne(groupId);
     const userName = user.name || (user.email ? user.email.split('@')[0] : 'Alguien');
-    this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
+    this.notifications.emitAndSave(groupId, "system", { targetUserIds: updatedGroup!.members, 
       type: "system",
       groupId: groupId,
-      message: `${userName} se ha unido al grupo.`
+      message: `CAMBIO EN EL GRUPO ${updatedGroup!.name}: ${userName} se ha unido al grupo.`
     });
     
     return { ok: true };
@@ -177,7 +177,7 @@ export class GroupsController {
     const userName = user.name || (user.email ? user.email.split('@')[0] : 'Alguien');
     this.notifications.emitAndSave(group!.id, "new_movement", { targetUserIds: group!.members, 
       type: "deposit",
-      message: `${userName} ingresó $${body.fiatAmount} al fondo común.`
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${userName} ingresó $${body.fiatAmount} al fondo común.`
     });
     return { ok: true };
   }
@@ -202,7 +202,7 @@ export class GroupsController {
 
     this.notifications.emitAndSave(group!.id, "new_movement", { targetUserIds: group!.members, 
       type: "expense",
-      message: `${formatName(user, 'Un miembro')} generó un gasto: ${body.desc} por $${Number(body.amountMon) * 1000}`
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} generó un gasto: ${body.desc} por $${Number(body.amountMon) * 1000}`
     });
 
     return { ok: true };
@@ -220,7 +220,7 @@ export class GroupsController {
     
     this.notifications.emitAndSave(group!.id, "vote", { targetUserIds: group!.members, 
       type: "vote",
-      message: `${formatName(user, 'Un miembro')} votó ${body.approve ? 'a favor' : 'en contra'} del gasto #${body.txId}`
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} votó ${body.approve ? 'a favor' : 'en contra'} del gasto #${body.txId}`
     });
 
     return { ok: true };
@@ -244,7 +244,7 @@ export class GroupsController {
       );
       this.notifications.emitAndSave(group!.id, "limit_proposal", { targetUserIds: group!.members, 
         type: "limit_proposal",
-        message: `${formatName(user, 'El creador')} propuso un nuevo límite de retiro de $${body.newLimit}`,
+        message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador')} propuso un nuevo límite de retiro de $${body.newLimit}`,
       });
       return { ok: true };
     } catch (err: any) {
@@ -270,7 +270,7 @@ export class GroupsController {
     );
     this.notifications.emitAndSave(group!.id, "vote", { targetUserIds: group!.members, 
       type: "vote",
-      message: `${formatName(user, 'Un miembro')} votó ${body.approve ? 'a favor' : 'en contra'} del cambio de límite #${body.proposalId}`,
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} votó ${body.approve ? 'a favor' : 'en contra'} del cambio de límite #${body.proposalId}`,
     });
     return { ok: true };
   }
@@ -289,7 +289,7 @@ export class GroupsController {
     
     this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
       type: "system",
-      message: `${formatName(user, 'El creador')} propuso eliminar el grupo.`,
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador')} propuso eliminar el grupo.`,
     });
     
     return proposal;
@@ -311,7 +311,7 @@ export class GroupsController {
     
     this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
       type: "system",
-      message: `${formatName(user, 'Un miembro')} votó ${body.approve ? 'a favor' : 'en contra'} de eliminar el grupo.`,
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} votó ${body.approve ? 'a favor' : 'en contra'} de eliminar el grupo.`,
     });
     
     return proposal;
@@ -324,7 +324,7 @@ export class GroupsController {
     
     this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
       type: "system",
-      message: `${formatName(user, 'El creador anterior')} ha dejado el grupo y transferido la administración.`,
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador anterior')} ha dejado el grupo y transferido la administración.`,
     });
     
     return group;
