@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import toast from "react-hot-toast";
+import { ENV } from "../env";
 
 const SocketContext = createContext<Socket | null>(null);
 
@@ -11,7 +12,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Connect to the backend
-    const s = io(import.meta.env.VITE_API_URL || "http://localhost:3000");
+    const s = io(ENV.BACKEND_URL);
     setSocket(s);
 
     s.on("new_movement", (data) => {

@@ -594,6 +594,7 @@ export default function UserDashboard() {
           <AprobacionesTab 
             groups={groups} 
             userAddress={user?.wallet?.address || ""} 
+            userId={localStorage.getItem("monad_dbUserId") || ""}
             readVotes={readVotes}
             onApprove={handleApprove}
             onReject={handleReject}

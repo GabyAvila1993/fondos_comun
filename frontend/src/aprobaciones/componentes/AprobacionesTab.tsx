@@ -6,6 +6,7 @@ import { fmt } from "../../compartido/lib/utils";
 interface AprobacionesTabProps {
   groups: Group[];
   userAddress: string;
+  userId: string;
   onApprove: (groupId: string, txId: number) => void;
   onReject: (groupId: string, txId: number) => void;
   onApproveLimit: (groupId: string, proposalId: number) => void;
@@ -15,7 +16,7 @@ interface AprobacionesTabProps {
   readVotes: string[];
 }
 
-export default function AprobacionesTab({ groups, userAddress, onApprove, onReject, onApproveLimit, onRejectLimit, onApproveDelete, onRejectDelete, readVotes }: AprobacionesTabProps) {
+export default function AprobacionesTab({ groups, userAddress, userId, onApprove, onReject, onApproveLimit, onRejectLimit, onApproveDelete, onRejectDelete, readVotes }: AprobacionesTabProps) {
   const [rate, setRate] = useState(1000);
 
   useEffect(() => {
@@ -42,9 +43,9 @@ export default function AprobacionesTab({ groups, userAddress, onApprove, onReje
     const deleteRequiredVotes = Math.floor((totalMembers - 1) / 2) + 1;
     const groupName = getGroupName(g);
 
-    const pendingDel = (g.deleteProposals || []).filter(p => p.status === "pending" && !readVotes.includes(`del-${p.id}`)).map(p => ({...p, groupId: g.id, groupName, deleteRequiredVotes}));
-    const pendingLim = (g.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`)).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit}));
-    const pendingTx = (g.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`)).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit}));
+    const pendingDel = (g.deleteProposals || []).filter(p => p.status === "pending" && !readVotes.includes(`del-${p.id}`) && p.creatorUserId !== userId).map(p => ({...p, groupId: g.id, groupName, deleteRequiredVotes}));
+    const pendingLim = (g.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`) && p.proposer?.toLowerCase() !== userAddress?.toLowerCase()).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit}));
+    const pendingTx = (g.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`) && p.proposer?.toLowerCase() !== userAddress?.toLowerCase()).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit}));
 
     allPendingDeletes.push(...pendingDel);
     allPendingLimits.push(...pendingLim);
