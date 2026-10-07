@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Patch, Req, UseGuards, BadRequestException, NotFoundException } from "@nestjs/common";
+﻿import { Body, Controller, Delete, Get, Param, Post, Patch, Req, UseGuards, BadRequestException, NotFoundException } from "@nestjs/common";
 import { GroupsService } from "./groups.service";
 import { RelayerService } from "../relayer/relayer.service";
 import { UsersService } from "../usuarios/users.service";
 import { PrivyAuthGuard } from "../autenticacion/privy-auth.guard";
 import { PrivyService } from "../autenticacion/privy.service";
 import { NotificationsService } from "../notificaciones/notifications.service";
+import { ethers } from "ethers";
 
 /**
  * Todos estos endpoints reciben la FIRMA que el usuario ya hizo en el
@@ -94,7 +95,7 @@ export class GroupsController {
     return { ...group, creatorUserId: group!.creatorUserId, ...state, name: group!.name, deposits, usersMap, deleteProposals };
   }
 
-  /** Estado real del fondo, leído en vivo desde Monad: balance, límites y feed de movimientos. */
+  /** Estado real del fondo, leÃ­do en vivo desde Monad: balance, lÃ­mites y feed de movimientos. */
   @Get(":id/state")
   async state(@Req() req: any, @Param("id") groupId: string) {
     const user = await this.currentUser(req);
@@ -145,7 +146,7 @@ export class GroupsController {
       const nonce = await this.relayer.getNonce(group!.contractAddress, user.walletAddress);
       return { nonce: nonce.toString() };
     } catch (err: any) {
-      throw new BadRequestException("Este grupo utiliza una versión antigua del contrato que no soporta esta función. Por favor, crea un nuevo grupo.");
+      throw new BadRequestException("Este grupo utiliza una versiÃ³n antigua del contrato que no soporta esta funciÃ³n. Por favor, crea un nuevo grupo.");
     }
   }
 
@@ -177,7 +178,7 @@ export class GroupsController {
     const userName = user.name || (user.email ? user.email.split('@')[0] : 'Alguien');
     this.notifications.emitAndSave(group!.id, "new_movement", { targetUserIds: group!.members, 
       type: "deposit",
-      message: `CAMBIO EN EL GRUPO ${group!.name}: ${userName} ingresó $${body.fiatAmount} al fondo común.`
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${userName} ingresÃ³ $${body.fiatAmount} al fondo comÃºn.`
     });
     return { ok: true };
   }
@@ -192,9 +193,7 @@ export class GroupsController {
     const group = await this.groups.findOne(groupId);
     await this.relayer.requestExpense(
       group!.contractAddress,
-      user.walletAddress,
-      body.amountMon,
-      body.desc,
+      user.walletAddress, ethers.parseUnits(body.amountMon, 6).toString(), body.desc,
       body.forceApproval,
       BigInt(body.nonce),
       body.signature,
@@ -202,7 +201,7 @@ export class GroupsController {
 
     this.notifications.emitAndSave(group!.id, "new_movement", { targetUserIds: group!.members, 
       type: "expense",
-      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} generó un gasto: ${body.desc} por $${Number(body.amountMon) * 1000}`
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} generÃ³ un gasto: ${body.desc} por $${Number(body.amountMon) * 1000}`
     });
 
     return { ok: true };
@@ -220,7 +219,7 @@ export class GroupsController {
     
     this.notifications.emitAndSave(group!.id, "vote", { targetUserIds: group!.members, 
       type: "vote",
-      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} votó ${body.approve ? 'a favor' : 'en contra'} del gasto #${body.txId}`
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} votÃ³ ${body.approve ? 'a favor' : 'en contra'} del gasto #${body.txId}`
     });
 
     return { ok: true };
@@ -244,7 +243,7 @@ export class GroupsController {
       );
       this.notifications.emitAndSave(group!.id, "limit_proposal", { targetUserIds: group!.members, 
         type: "limit_proposal",
-        message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador')} propuso un nuevo límite de retiro de $${body.newLimit}`,
+        message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador')} propuso un nuevo lÃ­mite de retiro de $${body.newLimit}`,
       });
       return { ok: true };
     } catch (err: any) {
@@ -270,7 +269,7 @@ export class GroupsController {
     );
     this.notifications.emitAndSave(group!.id, "vote", { targetUserIds: group!.members, 
       type: "vote",
-      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} votó ${body.approve ? 'a favor' : 'en contra'} del cambio de límite #${body.proposalId}`,
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} votÃ³ ${body.approve ? 'a favor' : 'en contra'} del cambio de lÃ­mite #${body.proposalId}`,
     });
     return { ok: true };
   }
@@ -311,7 +310,7 @@ export class GroupsController {
     
     this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
       type: "system",
-      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} votó ${body.approve ? 'a favor' : 'en contra'} de eliminar el grupo.`,
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} votÃ³ ${body.approve ? 'a favor' : 'en contra'} de eliminar el grupo.`,
     });
     
     return proposal;
@@ -324,7 +323,7 @@ export class GroupsController {
     
     this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
       type: "system",
-      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador anterior')} ha dejado el grupo y transferido la administración.`,
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador anterior')} ha dejado el grupo y transferido la administraciÃ³n.`,
     });
     
     return group;
@@ -336,3 +335,4 @@ export class GroupsController {
     return this.groups.updateName(groupId, user.id, body.name);
   }
 }
+
