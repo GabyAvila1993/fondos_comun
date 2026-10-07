@@ -2,6 +2,23 @@
 
 Fondo Comun es una aplicacion web que cree para que grupos de personas (como amigos, familiares o companeros de oficina) puedan juntar dinero en un pozo compartido de forma totalmente transparente y segura. La idea es que podamos guardar ese dinero en dolares digitales (USDC) utilizando la red Monad y gestionar todos los gastos de forma grupal, mediante un sistema de votaciones. Lo mejor de todo es que nadie necesita saber absolutamente nada de criptomonedas ni pagar comisiones extrañas; la plataforma se encarga de toda esa complejidad por detras.
 
+## 🏛️ Área del Jurado: Cómo probar la App (Demo)
+Para el equipo evaluador de Monad, hemos preparado un entorno de prueba para que no tengan que crear grupos desde cero.
+**Enlace a la Demo (Video de 2 mins):** [VIDEO_LINK_AQUI]
+
+**Paso a paso para probar la votación On-Chain:**
+1. Ingresa a la app. Tienes dos opciones para iniciar sesión:
+   - **Con tu propia Wallet:** Haz clic en "Ingresar a la App" y selecciona "Continue with a wallet" (MetaMask).
+   - **Con cuentas de prueba (Sin Wallet):** Utiliza cualquiera de estos correos de prueba. Privy autogenerará una billetera por ti sin requerir contraseñas ni gas.
+     - **Juez 1:** Email: `test-7216@privy.io` | OTP: `196682`
+     - **Juez 2:** Email: `test-7971@privy.io` | OTP: `776622`
+     - **Juez 3:** Email: `test-1428@privy.io` | OTP: `425212`
+
+2. En la sección "Unirse", pega este ID de grupo de prueba: `[ID_DEL_GRUPO]`.
+3. Abre una ventana de incógnito, conecta una **segunda cuenta** (o usa otro correo de la lista), únete con el mismo ID, y prueba cómo ambos miembros deben interactuar para aprobar retiros o cambios de límites de forma 100% on-chain.
+
+---
+
 ## El problema que venimos a solucionar
 Tradicionalmente, cuando un grupo necesita juntar dinero para algo (un viaje, una cena, comprar cosas para la oficina), una sola persona se encarga de recolectar todo el dinero en su cuenta bancaria personal. Esto siempre trae problemas:
 - Falta de transparencia: Los demas no pueden ver exactamente cuanto dinero hay o en que se gasto.

@@ -34,7 +34,7 @@ export default function MiCuentaTab({ userAddress, userEmail, stats, groups = []
   };
 
   // Use real stats or fallback to 0
-  const totalDeposited = stats?.totalDeposited ? Number(stats.totalDeposited) * 1000 : 0;
+  const totalDeposited = stats?.totalDeposited ? Number(stats.totalDeposited) : 0;
   const groupsCount = stats?.groupsCount || 0;
 
   const pendingVotes = groups.flatMap(g => {

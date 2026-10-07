@@ -295,6 +295,7 @@ export default function UserDashboard() {
 
       toast.success(`¡Gasto aprobado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       setReadVotes(prev => [...prev, `tx-${txId}`]);
+        setActiveTab("inicio");
       fetchGroupDetails(targetGroup.id);
     } catch (err: any) {
       toast.error("Error al aprobar: " + err.message);
@@ -337,6 +338,7 @@ export default function UserDashboard() {
 
       toast.success(`¡Gasto rechazado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       setReadVotes(prev => [...prev, `tx-${txId}`]);
+        setActiveTab("inicio");
       fetchGroupDetails(targetGroup.id);
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
@@ -379,6 +381,7 @@ export default function UserDashboard() {
 
       toast.success(`¡Cambio de límite aprobado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       setReadVotes(prev => [...prev, `lim-${proposalId}`]);
+        setActiveTab("inicio");
       fetchGroupDetails(targetGroup.id);
     } catch (err: any) {
       toast.error("Error al aprobar: " + err.message);
@@ -421,6 +424,7 @@ export default function UserDashboard() {
 
       toast.success(`¡Cambio de límite rechazado en ${(end-start)/1000}s! ⚡️`, { id: tid });
       setReadVotes(prev => [...prev, `lim-${proposalId}`]);
+        setActiveTab("inicio");
       fetchGroupDetails(targetGroup.id);
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
@@ -440,6 +444,7 @@ export default function UserDashboard() {
       await api.voteDelete(token, targetGroup.id, { proposalId, approve: true });
       toast.success("Eliminación aprobada", { id: tid });
       setReadVotes(prev => [...prev, `del-${proposalId}`]);
+        setActiveTab("inicio");
       fetchGroupDetails(targetGroup.id);
       
       // If it got deleted, refresh list
@@ -462,6 +467,7 @@ export default function UserDashboard() {
       await api.voteDelete(token, targetGroup.id, { proposalId, approve: false });
       toast.success("Eliminación rechazada", { id: tid });
       setReadVotes(prev => [...prev, `del-${proposalId}`]);
+        setActiveTab("inicio");
       fetchGroupDetails(targetGroup.id);
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
@@ -554,9 +560,14 @@ export default function UserDashboard() {
   };
 
   const pendingVotesCount = groups.reduce((acc, g) => {
-    const txs = (g.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`)).length;
-    const limits = (g.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`)).length;
-    const deletes = (g.deleteProposals || []).filter(p => p.status === "pending" && !readVotes.includes(`del-${p.id}`)).length;
+    const currentUserId = localStorage.getItem("monad_dbUserId") || "";
+    const linkedWallet = user?.linkedAccounts?.find(a => a.type === 'wallet')?.address;
+    const myWallet = (g.usersMap?.[currentUserId]?.walletAddress || user?.wallet?.address || linkedWallet || "").toLowerCase();
+    
+    const txs = (g.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`) && p.proposer?.toLowerCase() !== myWallet).length;
+    const limits = (g.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`) && p.proposer?.toLowerCase() !== myWallet).length;
+    const deletes = (g.deleteProposals || []).filter(p => p.status === "pending" && !readVotes.includes(`del-${p.id}`) && p.creatorUserId !== currentUserId).length;
+    
     return acc + txs + limits + deletes;
   }, 0);
 
@@ -593,7 +604,7 @@ export default function UserDashboard() {
         {activeTab === "aprobaciones" && (
           <AprobacionesTab 
             groups={groups} 
-            userAddress={user?.wallet?.address || ""} 
+            userAddress={user?.wallet?.address || user?.linkedAccounts?.find(a => a.type === 'wallet')?.address || ""} 
             userId={localStorage.getItem("monad_dbUserId") || ""}
             readVotes={readVotes}
             onApprove={handleApprove}
@@ -606,7 +617,7 @@ export default function UserDashboard() {
         )}
         {activeTab === "perfil" && (
           <MiCuentaTab 
-            userAddress={user?.wallet?.address || ""} 
+            userAddress={user?.wallet?.address || user?.linkedAccounts?.find(a => a.type === 'wallet')?.address || ""} 
             userEmail={user?.google?.email || user?.email?.address || ""}
             stats={userStats} 
             groups={groups}
@@ -666,6 +677,7 @@ export default function UserDashboard() {
             setSheetView(null); 
             setJoinGroupData(undefined); 
             if (sheetView === "new_group" || sheetView === "join_group") {
+                setActiveTab("inicio");
               // Pequeño delay para que el RPC de Monad asimile la creación
               setTimeout(() => loadBasicData(), 1500);
             } else if (activeGroup) {

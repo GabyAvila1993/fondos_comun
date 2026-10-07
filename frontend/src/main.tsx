@@ -15,7 +15,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <PrivyProvider
       appId={ENV.PRIVY_APP_ID}
       config={{
-        loginMethods: ["google", "email"],
+        loginMethods: ["google", "email", "wallet"],
         embeddedWallets: { createOnLogin: "users-without-wallets" },
         appearance: { theme: "light", accentColor: "#0F3D37" },
       }}

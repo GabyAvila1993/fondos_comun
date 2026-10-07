@@ -16,6 +16,13 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     setSocket(s);
 
     s.on("new_movement", (data) => {
+      const currentDbUserId = localStorage.getItem("monad_dbUserId");
+      const isTarget = (!data.targetUserId && (!data.targetUserIds || data.targetUserIds.length === 0)) || 
+             (currentDbUserId && data.targetUserId === currentDbUserId) || 
+             (currentDbUserId && data.targetUserIds?.includes(currentDbUserId));
+      
+      if (!isTarget) return;
+
       toast(data.message, {
         icon: data.type === "deposit" ? "💰" : "💳",
         style: {
@@ -36,6 +43,10 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     s.on("group_deleted", (data) => {
       window.dispatchEvent(new CustomEvent("socket_group_deleted", { detail: data }));
+    });
+
+    s.on("limit_proposal", (data) => {
+      window.dispatchEvent(new CustomEvent("socket_system", { detail: data }));
     });
 
     s.on("system", (data) => {
