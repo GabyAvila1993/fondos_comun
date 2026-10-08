@@ -1,108 +1,118 @@
-﻿# Fondo Comun
+# Fondo Común
+**Billeteras Grupales Descentralizadas sin Fricción**
 
-Fondo Comun es una aplicacion web que cree para que grupos de personas (como amigos, familiares o companeros de oficina) puedan juntar dinero en un pozo compartido de forma totalmente transparente y segura. La idea es que podamos guardar ese dinero en dolares digitales (USDC) utilizando la red Monad y gestionar todos los gastos de forma grupal, mediante un sistema de votaciones. Lo mejor de todo es que nadie necesita saber absolutamente nada de criptomonedas ni pagar comisiones extrañas; la plataforma se encarga de toda esa complejidad por detras.
+Fondo Común es una app web que armé para que grupos de personas (amigos, familias o compañeros de laburo) puedan juntar plata en un pozo compartido de forma totalmente transparente y segura. La plata se guarda en dólares digitales (USDC) usando la velocidad de la red **Monad**, y cualquier gasto que quieran hacer se decide entre todos a través de un sistema de votaciones on-chain.
 
-## 🏛️ Área del Jurado: Cómo probar la App (Demo)
-Para el equipo evaluador de Monad, hemos preparado un entorno de prueba para que no tengan que crear grupos desde cero.
-**Enlace a la Demo (Video de 2 mins):** [VIDEO_LINK_AQUI]
+¿Cuál es la magia de esto? **Nadie necesita saber absolutamente nada de criptomonedas ni pagar gas**. La app se encarga de esconder toda esa complejidad técnica mediante Account Abstraction y un sistema de Relayer. El usuario siente que está usando una app normal.
 
-**Paso a paso para probar la votación On-Chain:**
-1. Ingresa a la app. Tienes dos opciones para iniciar sesión:
-   - **Con tu propia Wallet:** Haz clic en "Ingresar a la App" y selecciona "Continue with a wallet" (MetaMask).
-   - **Con cuentas de prueba (Sin Wallet):** Utiliza cualquiera de estos correos de prueba. Privy autogenerará una billetera por ti sin requerir contraseñas ni gas.
+---
+
+## 🏛️ Área del Jurado: Cómo probar la Demo
+Para los jueces de Monad Metropolis, les preparé un entorno de prueba para que no tengan que configurar nada desde cero.
+
+**Enlace a la Demo (Video Pitch de 2 mins):** [VIDEO_LINK_AQUI]
+
+**Paso a paso para jugar con las votaciones On-Chain:**
+1. Entren a la app web. Tienen dos formas de iniciar sesión:
+   - **Con su propia Wallet:** Hagan clic en "Ingresar a la App" y elijan "Continue with a wallet" (MetaMask).
+   - **Con cuentas de prueba (Sin Wallet):** Pueden usar cualquiera de estos correos. Privy les va a generar una billetera invisible (Embedded Wallet) sin pedirles contraseñas ni gas.
      - **Juez 1:** Email: `test-7216@privy.io` | OTP: `196682`
      - **Juez 2:** Email: `test-7971@privy.io` | OTP: `776622`
      - **Juez 3:** Email: `test-1428@privy.io` | OTP: `425212`
 
-2. En la sección "Unirse", pega este ID de grupo de prueba: `[ID_DEL_GRUPO]`.
-3. Abre una ventana de incógnito, conecta una **segunda cuenta** (o usa otro correo de la lista), únete con el mismo ID, y prueba cómo ambos miembros deben interactuar para aprobar retiros o cambios de límites de forma 100% on-chain.
+2. Vayan a la pestaña "Unirse" y peguen este ID de grupo de prueba: `[ID_DEL_GRUPO]`.
+3. Para ver la magia de verdad: abran una ventana de incógnito, conecten una **segunda cuenta** (con otro correo de la lista), únanse con el mismo ID, y prueben proponer un gasto o cambiar un límite. Van a ver cómo los dos usuarios interactúan para aprobar las cosas 100% on-chain firmando mensajes (EIP-712).
 
 ---
 
-## El problema que venimos a solucionar
-Tradicionalmente, cuando un grupo necesita juntar dinero para algo (un viaje, una cena, comprar cosas para la oficina), una sola persona se encarga de recolectar todo el dinero en su cuenta bancaria personal. Esto siempre trae problemas:
-- Falta de transparencia: Los demas no pueden ver exactamente cuanto dinero hay o en que se gasto.
-- Riesgo centralizado: Si la persona que tiene el dinero tiene algun problema con su cuenta bancaria, todo el grupo se ve afectado.
-- Desconfianza y friccion: Para cada gasto, la persona administradora tiene que rendir cuentas manualmente y avisar a los demas.
+## ¿Qué problema venimos a solucionar?
+Siempre que armamos algo grupal y hay que poner plata (un viaje, una cena, juntar para la oficina), pasa lo mismo: uno presta su cuenta de banco y todos le transfieren ahí. A partir de ese momento, arrancan los problemas:
+- **Falta de transparencia:** Los demás no ven cuánta plata hay en la cuenta de esa persona ni en qué se va gastando.
+- **Riesgo centralizado:** Si el que guarda la plata tiene un problema con el banco o le bloquean la cuenta, todo el grupo la pasa mal.
+- **Roce y desconfianza:** El administrador tiene que andar rindiendo cuentas a mano cada vez que paga algo.
 
-Con Fondo Comun, el dinero no lo tiene una persona, lo tiene un "contrato inteligente" inviolable. Las reglas de como se gasta ese dinero estan escritas en codigo y todos los miembros tienen voz y voto sobre que se hace con los fondos. 
+Con Fondo Común, la plata no la tiene una persona en su banco, la custodia un **Contrato Inteligente** inviolable. Las reglas de cómo se gasta están grabadas en el código y todos tienen voz y voto.
 
-## Nuestras Ventajas
-- Transparencia total: Todos los miembros del grupo pueden ver el saldo exacto en todo momento y el historial de movimientos.
-- Democracia financiera: Ningun miembro (ni siquiera el creador del grupo) puede gastar el dinero si la mayoria no esta de acuerdo. Todo pasa por un sistema de votacion.
-- Proteccion contra la inflacion: Al convertir el dinero a dolares digitales (USDC), nos aseguramos de que los fondos mantengan su poder adquisitivo.
-- Cero complicaciones: Los usuarios ingresan con su correo electronico y usan la aplicacion como cualquier otra. Nosotros cubrimos todas las comisiones de la red por detras (es un sistema sin comisiones para el usuario final).
-- Tiempo real: Cualquier deposito, propuesta de gasto o voto se actualiza al instante en la pantalla de todos los miembros del grupo gracias a nuestro sistema de notificaciones en vivo.
+---
 
-## Funcionalidades Principales
-- Inicio de sesion simple: Solo necesitas tu correo electronico para entrar.
-- Creacion y administracion de grupos: Podes crear fondos comunes, invitar a otras personas compartiendo un simple enlace, cambiar el nombre del grupo e incluso transferir la administracion a otra persona.
-- Depositos simulados: Podes simular ingresos de dinero en moneda local y la plataforma lo convierte automaticamente a dolares digitales tomando el valor de mercado en tiempo real.
-- Sistema de limites de gastos: Cada grupo tiene un limite de credito y un limite de transacciones diarias. Si alguien quiere gastar mas de eso, se genera una propuesta de aprobacion.
-- Votaciones agiles: Si un gasto supera el limite, los miembros deben votar. La regla es clara: si son dos personas, el otro debe aprobar; si son tres o mas, se requiere la mayoria absoluta.
-- Modificacion de limites: El creador puede proponer aumentar o reducir los limites del grupo, lo cual tambien se somete a votacion.
-- Cancelacion y retiro de administrador: Un creador puede proponer eliminar el grupo. Si los participantes lo rechazan, el creador puede cancelar su propuesta o simplemente transferirle su puesto a otro miembro y salir del grupo limpiamente.
-- Perfil personalizable: Cada usuario puede editar su nombre para que los demas lo reconozcan facilmente en las votaciones y notificaciones. Si no lo hacen, usamos su correo para identificarlos.
+## Funcionalidades y Arquitectura Técnica
+El proyecto sigue el modelo de "Screaming Architecture", donde separé todo por dominio de negocio (Backend en NestJS, Frontend en React+Vite, y Smart Contracts en Hardhat).
 
-## Guia para iniciar el proyecto desde cero
+- **Registro Fricción Cero (Privy):** La gente entra solo con su correo (con un código OTP) y se les crea una billetera integrada invisible. Cero dolores de cabeza con frases semilla.
+- **Transacciones Gasless (Relayer):** El backend funciona como un Relayer. El usuario firma intenciones (EIP-712) gratis en su navegador, y mi backend recibe eso y paga el gas (MON) en la red Monad para mandar la transacción on-chain. El usuario final no gasta un solo centavo de gas.
+- **Manejo en Dólares (USDC):** Protegemos los ahorros del grupo contra la inflación poniéndolo en USDC. Hasta armé una simulación donde el usuario deposita en moneda local (fiat) y la app consulta APIs de mercado en tiempo real para inyectar los USDC equivalentes.
+- **Democracia Pura (Quórum):** Si alguien quiere hacer un retiro que supera los límites, se va a votación. Regla de **Mayoría Absoluta** (>50% de los miembros). En grupos de a 2, requiere el 100% de acuerdo. 1 persona = 1 voto.
+- **Todo en Tiempo Real:** Le metí WebSockets aislados. Si alguien deposita o propone un gasto, las notificaciones saltan al instante *solo* en las pantallas de ese grupo.
+- **Autonomía Total:** El creador del grupo puede proponer cambiar los límites de plata o disolver el contrato, siempre y cuando el grupo lo apruebe.
 
-Si queres levantar este proyecto en tu propia computadora, aca te explico paso a paso como hacerlo. 
+---
 
-### Requisitos Previos
-1. Instalar Node.js (version 18 o superior) en tu computadora.
-2. Tener una base de datos PostgreSQL. Podes crearte una cuenta gratuita en Neon.tech y obtener ahi el enlace de conexion.
-3. Crearte una cuenta en Privy (privy.io) para manejar la autenticacion de los usuarios.
-4. Tener una billetera de desarrollo (como MetaMask) conectada a la red de pruebas de Monad (Monad Testnet). Vas a necesitar algunos tokens MON de prueba para cubrir las comisiones y tokens USDC para los movimientos.
+## Guía para levantar el proyecto localmente
+Si te quieres bajar el repositorio y hacerlo correr en tu máquina, estos son los pasos:
+
+### Qué necesitas tener instalado
+1. Node.js (versión 18 para arriba).
+2. Una base de datos PostgreSQL (yo usé una gratis de Neon.tech).
+3. Hacerte una cuenta en [Privy.io](https://privy.io) para sacar un App ID y App Secret.
+4. Una wallet de desarrollo (MetaMask) conectada a **Monad Testnet** con tokens MON para que el Relayer tenga saldo para pagar el gas.
 
 ### 1. Levantar los Smart Contracts
-El nucleo de la confianza esta en la carpeta "contracts". Aca es donde creamos las reglas del juego.
-
-Entra a la carpeta de contratos e instala las dependencias:
+Acá viven las reglas del juego (carpeta `contracts`).
+```bash
+cd contracts
 npm install
-
-Crea un archivo llamado ".env" en esta carpeta y agrega las siguientes variables:
-PRIVATE_KEY=Aca pones la clave privada de tu billetera MetaMask. ¡No la compartas con nadie!
-MONAD_RPC_URL=Aca pones la direccion de la red de pruebas, por ejemplo: https://testnet-rpc.monad.xyz/
-
-Despues, compila y subi los contratos a la red ejecutando:
+```
+Créate un archivo `.env` adentro de la carpeta contracts con esto:
+```env
+PRIVATE_KEY=La_Clave_Privada_De_Tu_Metamask
+MONAD_RPC_URL=https://testnet-rpc.monad.xyz/
+```
+Compilalos y subilos a Monad:
+```bash
 npx hardhat compile
 npx hardhat run scripts/deploy.ts --network monadTestnet
-
-Cuando termine, la consola te va a dar la direccion del contrato "SharedWalletFactory" y la direccion del token "USDC". Guarda esos datos porque los vamos a usar en el backend.
+```
+*(Anotate la dirección del `SharedWalletFactory` y del `USDC` que te va a tirar la consola, los vas a necesitar).*
 
 ### 2. Levantar el Backend
-El backend es el motor que coordina todo, guarda el historial en la base de datos y paga las comisiones de los usuarios.
-
-Entra a la carpeta del backend e instala las dependencias:
+El motorcito REST y WebSockets que paga el gas y coordina todo.
+```bash
+cd backend
 npm install
-
-Crea un archivo llamado ".env" en la carpeta backend con estas variables:
-DATABASE_URL=Aca va el enlace de conexion de tu base de datos PostgreSQL (la que creaste en Neon).
-PRIVY_APP_ID=El ID de tu aplicacion en Privy (lo sacas de su pagina web).
-PRIVY_APP_SECRET=El secreto de tu aplicacion en Privy.
-MONAD_RPC_URL=La misma direccion de red que usamos en los contratos.
-RELAYER_PRIVATE_KEY=La clave privada de la billetera que va a pagar las comisiones de los usuarios.
-FACTORY_CONTRACT_ADDRESS=La direccion del contrato SharedWalletFactory que guardamos en el paso 1.
-MONAD_USDC_ADDRESS=La direccion del token USDC que guardamos en el paso 1.
-DEMO_FIAT_TO_USD_RATE=0.001 (Esto es por si falla la consulta del dolar en tiempo real).
-
-Una vez configurado, inicia el servidor con:
+```
+Armá tu `.env` ahí:
+```env
+DATABASE_URL=Tu_URL_de_PostgreSQL
+PRIVY_APP_ID=Tu_Privy_App_ID
+PRIVY_APP_SECRET=Tu_Privy_Secret
+MONAD_RPC_URL=https://testnet-rpc.monad.xyz/
+RELAYER_PRIVATE_KEY=Clave_Privada_Del_Relayer_Que_Paga_El_Gas
+FACTORY_CONTRACT_ADDRESS=Address_Del_Factory
+MONAD_USDC_ADDRESS=Address_Del_USDC
+DEMO_FIAT_TO_USD_RATE=0.001
+```
+Levantalo:
+```bash
 npm run start:dev
+```
 
 ### 3. Levantar el Frontend
-Esta es la cara visible de la aplicacion, lo que ven los usuarios.
-
-Entra a la carpeta del frontend e instala las dependencias:
+La interfaz visual (React + Vite).
+```bash
+cd frontend
 npm install
-
-Crea un archivo llamado ".env" en la carpeta frontend con estas variables:
-VITE_PRIVY_APP_ID=El mismo ID de aplicacion de Privy que usaste en el backend.
-VITE_API_URL=http://localhost:3000 (Esta es la direccion donde esta corriendo nuestro backend local).
-
-Para iniciar la aplicacion web, ejecuta:
+```
+El `.env` del frontend:
+```env
+VITE_PRIVY_APP_ID=Tu_Privy_App_ID
+VITE_API_URL=http://localhost:3000
+```
+Y lo corres con:
+```bash
 npm run dev
+```
 
-¡Y listo! Ya podes entrar a la direccion que te indique la consola y empezar a usar Fondo Comun.
+---
 
 ### Declaración de Uso de Inteligencia Artificial (Hackathon Rules)
-En cumplimiento con las reglas del hackathon Monad Metropolis (Tip 10 de las bases legales), declaramos formalmente que el desarrollo de este código ha sido asistido por herramientas de Inteligencia Artificial (LLMs). Las herramientas de IA se han utilizado para asistir en la estructuración del proyecto, la generación de interfaces, revisión de lógica de smart contracts y depuración de errores (debugging). Todo el diseño de producto, arquitectura general, lógica de negocio central y toma de decisiones pertenecen exclusivamente a los autores humanos del proyecto.
+Para cumplir con el Tip 10 de Monad Metropolis, quiero aclarar que me apoyé en herramientas de IA (LLMs) durante el desarrollo de la app. Las usé más que nada como asistente de programación para armar bases de componentes, resolver bugs rápido (debugging) y ajustar detalles visuales de la interfaz. Más allá de esa ayuda técnica, toda la idea del producto, la arquitectura descentralizada (el modelo Gasless con Relayer) y las reglas matemáticas detrás de las votaciones y seguridad son creación exclusiva y original mía.
