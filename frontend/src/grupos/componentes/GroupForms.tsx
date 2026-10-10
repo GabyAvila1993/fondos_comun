@@ -43,7 +43,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
       await api.createGroup(token, {
         name,
         creditLimit: String(fiatToMon(limitFiat)),
-        dailyLimit: 0
+        dailyLimit: 100
       });
       const end = Date.now();
       

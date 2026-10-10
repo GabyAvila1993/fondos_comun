@@ -1,7 +1,7 @@
 import { useTasaDolar } from "../../compartido/hooks/useTasaDolar";
 import { useState, useEffect } from "react";
 import type { Group } from "../../compartido/tipos";
-import { Plus, Wallet, FileText, Users, ShareNetwork, CaretDown, Trash, PencilSimple } from "@phosphor-icons/react";
+import { Plus, Wallet, FileText, Users, ShareNetwork, CaretDown, Trash, PencilSimple, Crown } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import Sheet from "../../compartido/componentes/Sheet";
 import { fmt, formatUserName } from "../../compartido/lib/utils";
@@ -27,6 +27,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
   const activeGroup = groups.find((g) => g.id === activeGroupId);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
+  const [groupToTransfer, setGroupToTransfer] = useState<Group | null>(null);
   const [groupToRename, setGroupToRename] = useState<Group | null>(null);
   const fiatToMonRate = useTasaDolar(1000);
   
@@ -87,17 +88,17 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
                     }} style={{ flexGrow: 1 }}>{getGroupName(g)}</span>
                     
                     {g.isCreator && !g.deleteProposals?.some(p => p.status === "pending" || p.status === "rejected") && (
-                      <Trash 
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}><Crown weight="fill" size={20} color="var(--primary)" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setGroupToTransfer(g); setIsDropdownOpen(false); }} /><Trash 
                         weight="fill" 
                         size={20} 
                         color="#ff4444" 
-                        style={{ cursor: 'pointer', paddingLeft: '8px' }}
+                        style={{ cursor: 'pointer' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setGroupToDelete(g);
                           setIsDropdownOpen(false);
                         }} 
-                      />
+                      /></div>
                     )}
                   </div>
                 ))}
@@ -155,83 +156,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
           <span>Crear nuevo grupo</span>
         </button>
       </div>
-      {/* Alerta de Votación de Eliminación Denegada */}
-      {activeGroup && activeGroup.isCreator && (activeGroup.deleteProposals || []).some(p => p.status === "rejected") && (
-        <div style={{ background: "#fef2f2", margin: "0 20px 20px 20px", padding: "16px", borderRadius: "12px", border: "1px solid #fecaca" }}>
-          <h4 style={{ color: "#991b1b", marginTop: 0, marginBottom: "8px" }}>Los participantes no quieren eliminar el grupo {getGroupName(activeGroup)}</h4>
-          <p style={{ color: "#b91c1c", fontSize: "0.9rem", marginBottom: "16px" }}>
-            Si vos te querés ir podés hacerlo transfiriendo el grupo a uno de los integrantes.
-          </p>
-          
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <select 
-              className="form-input" 
-              style={{ background: "white" }}
-              value={selectedNewAdminId}
-              onChange={(e) => {
-                setSelectedNewAdminId(e.target.value);
-                setNewAdminConfirmed(false);
-              }}
-            >
-              <option value="">Seleccionar nuevo administrador...</option>
-              {activeGroup.members?.filter(m => m !== userId).map(memberId => (
-                <option key={memberId} value={memberId}>
-                  {activeGroup.usersMap?.[memberId] ? formatUserName(activeGroup.usersMap[memberId]) : `Usuario ${memberId.substring(0,6)}...`}
-                </option>
-              ))}
-            </select>
-            
-            {!newAdminConfirmed ? (
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button 
-                    className="btn-outline"
-                    disabled={!selectedNewAdminId}
-                    onClick={() => setNewAdminConfirmed(true)}
-                    style={{ flex: 1, opacity: !selectedNewAdminId ? 0.5 : 1 }}
-                  >
-                    Confirmar nuevo admin
-                  </button>
-                  <button 
-                    className="btn-outline"
-                    style={{ flex: 1, background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}
-                    onClick={() => onCancelDeleteProposal && onCancelDeleteProposal(activeGroup.id)}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-            ) : (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button 
-                  className="btn-outline"
-                  onClick={() => setNewAdminConfirmed(false)}
-                  style={{ flex: 1 }}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  className="btn-primary"
-                  onClick={() => {
-                    const wallet = activeGroup.usersMap?.[selectedNewAdminId]?.walletAddress;
-                    if (!wallet) {
-                      toast.error("El usuario seleccionado no tiene una wallet válida.");
-                      return;
-                    }
-                    onChangeAdminLeave(activeGroup.id, selectedNewAdminId, wallet);
-                  }}
-                  style={{ 
-                    flex: 1,
-                    background: "#dc2626",
-                    color: "white",
-                    border: "none"
-                  }}
-                >
-                  Salir del grupo
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      
 
       {/* Tus Grupos */}
       <div className="card" style={{ padding: "0" }}>
@@ -376,3 +301,6 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
     </div>
   );
 }
+
+
+

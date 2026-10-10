@@ -23,14 +23,10 @@ interface MiCuentaTabProps {
 export default function MiCuentaTab({ userAddress, userEmail, stats, groups = [], readVotes = [], notificationsHistory = [], onMarkAsRead, onNavigateToVote, onNavigateToGroup, onEditName, onLogout }: MiCuentaTabProps) {
   const defaultName = userEmail ? userEmail.split('@')[0] : "Usuario";
   const [userName, setUserName] = useState(() => localStorage.getItem("monad_username") || defaultName);
+  const [showEditNameSheet, setShowEditNameSheet] = useState(false);
 
   const handleEditName = () => {
-    const newName = prompt("Ingresa tu nuevo nombre de usuario:", userName);
-    if (newName && newName.trim()) {
-      setUserName(newName.trim());
-      localStorage.setItem("monad_username", newName.trim());
-      if (onEditName) onEditName(newName.trim());
-    }
+    setShowEditNameSheet(true);
   };
 
   // Use real stats or fallback to 0
@@ -282,6 +278,48 @@ export default function MiCuentaTab({ userAddress, userEmail, stats, groups = []
               );
             })
           )}
+        </div>
+      </Sheet>
+
+      <Sheet isOpen={showEditNameSheet} onClose={() => setShowEditNameSheet(false)} title="Editar nombre de usuario">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '8px' }}>
+          <p style={{ color: "var(--text-muted)", marginBottom: "0px", marginTop: "-16px" }}>
+            Ingresa tu nuevo nombre de usuario:
+          </p>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <input 
+              type="text" 
+              id="rename-user-input"
+              className="form-input" 
+              defaultValue={userName}
+              placeholder="Ej. Usuario Prueba 2"
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button 
+              className="btn-outline"
+              style={{ flex: 1 }}
+              onClick={() => setShowEditNameSheet(false)}
+            >
+              Cancelar
+            </button>
+            <button 
+              className="btn-primary"
+              style={{ flex: 1 }}
+              onClick={() => {
+                const input = document.getElementById("rename-user-input") as HTMLInputElement;
+                const newName = input?.value;
+                if (newName && newName.trim()) {
+                  setUserName(newName.trim());
+                  localStorage.setItem("monad_username", newName.trim());
+                  if (onEditName) onEditName(newName.trim());
+                }
+                setShowEditNameSheet(false);
+              }}
+            >
+              Aceptar
+            </button>
+          </div>
         </div>
       </Sheet>
     </div>
