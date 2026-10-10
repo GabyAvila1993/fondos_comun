@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Delete, Get, Param, Post, Patch, Req, UseGuards, BadRequestException, NotFoundException } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Patch, Req, UseGuards, BadRequestException, NotFoundException } from "@nestjs/common";
 import { GroupsService } from "./groups.service";
 import { RelayerService } from "../relayer/relayer.service";
 import { UsersService } from "../usuarios/users.service";
@@ -128,7 +128,7 @@ export class GroupsController {
       }
     }
 
-    return { id: group!.id, contractAddress: group!.contractAddress, creatorUserId: group!.creatorUserId, isCreator: group!.creatorUserId === user.id, ...onchain, name: group!.name, deposits, deleteProposals, usersMap };
+    return { id: group!.id, contractAddress: group!.contractAddress, creatorUserId: group!.creatorUserId, isCreator: group!.creatorUserId === user.id, members: group!.members, ...onchain, name: group!.name, deposits, deleteProposals, usersMap };
   }
 
   @Post()
