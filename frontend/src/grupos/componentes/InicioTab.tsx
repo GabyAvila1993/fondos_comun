@@ -319,7 +319,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
               <option value="">Seleccionar nuevo administrador...</option>
               {groupToTransfer?.members?.filter(m => m !== userId).map(memberId => (
                 <option key={memberId} value={memberId}>
-                  {groupToTransfer.usersMap?.[memberId] ? formatUserName(groupToTransfer.usersMap[memberId]) : `Usuario ${memberId.substring(0,6)}...`}
+                  {groupToTransfer.usersMap?.[memberId] ? formatUserName(groupToTransfer.usersMap[memberId]) : `Usuario ${(memberId ? memberId.substring(0,6) : '')}...`}
                 </option>
               ))}
             </select>
@@ -344,13 +344,29 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button 
-                className="btn-outline"
-                onClick={() => setNewAdminConfirmed(false)}
-                style={{ flex: 1 }}
+                className="btn-primary"
+                onClick={() => {
+                  if (groupToTransfer) {
+                    const wallet = groupToTransfer.usersMap?.[selectedNewAdminId]?.walletAddress;
+                    if (!wallet) {
+                      toast.error("El usuario seleccionado no tiene una wallet válida.");
+                      return;
+                    }
+                    if(onTransferAdmin) {
+                      onTransferAdmin(groupToTransfer.id, selectedNewAdminId, wallet);
+                    } else {
+                      toast.error("Error interno: onTransferAdmin no definido");
+                    }
+                    setGroupToTransfer(null);
+                    setNewAdminConfirmed(false);
+                    setSelectedNewAdminId("");
+                  }
+                }}
+                style={{ background: "var(--primary)", color: "white", border: "none" }}
               >
-                Atrás
+                Solo Transferir (Quedarme como miembro)
               </button>
               <button 
                 className="btn-primary"
@@ -367,14 +383,15 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
                     setSelectedNewAdminId("");
                   }
                 }}
-                style={{ 
-                  flex: 1,
-                  background: "#dc2626",
-                  color: "white",
-                  border: "none"
-                }}
+                style={{ background: "#dc2626", color: "white", border: "none" }}
               >
-                Transferir y Salir
+                Transferir y Salir del grupo
+              </button>
+              <button 
+                className="btn-outline"
+                onClick={() => setNewAdminConfirmed(false)}
+              >
+                Atrás
               </button>
             </div>
           )}
