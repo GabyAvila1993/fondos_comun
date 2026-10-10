@@ -83,8 +83,8 @@ contract SharedWallet {
         keccak256("ProposeLimit(address proposer,uint256 newLimit,uint256 nonce)");
     bytes32 public constant VOTE_LIMIT_TYPEHASH =
         keccak256("VoteLimit(address voter,uint256 id,bool approve,uint256 nonce)");
-    bytes32 public constant CHANGE_ADMIN_TYPEHASH =
-        keccak256("ChangeAdmin(address currentAdmin,address newAdmin,uint256 nonce)");
+    bytes32 public constant CHANGE_ADMIN_TYPEHASH = keccak256("ChangeAdmin(address currentAdmin,address newAdmin,uint256 nonce)");
+    bytes32 public constant TRANSFER_ADMIN_TYPEHASH = keccak256("TransferAdmin(address currentAdmin,address newAdmin,uint256 nonce)");
     bytes32 public immutable DOMAIN_SEPARATOR;
 
     Transaction[] private transactions;
@@ -473,6 +473,21 @@ contract SharedWallet {
         }
     }
 
+        function transferAdminFor(address currentAdmin, address newAdmin, uint256 nonce, bytes calldata signature) external onlyRelayer {
+        require(currentAdmin == admin, "No es admin");
+        require(members[currentAdmin].active, "Admin no es miembro");
+        require(members[newAdmin].active, "Nuevo admin no es miembro");
+        require(nonce == nonces[currentAdmin], "Nonce invalido");
+
+        bytes32 structHash = keccak256(abi.encode(TRANSFER_ADMIN_TYPEHASH, currentAdmin, newAdmin, nonce));
+        require(_recoverSigner(_hashTypedData(structHash), signature) == currentAdmin, "Firma invalida");
+        nonces[currentAdmin] += 1;
+
+        // Transferir admin sin salir
+        admin = newAdmin;
+        emit AdminChanged(currentAdmin, newAdmin);
+    }
+
     function changeAdminAndLeaveFor(address currentAdmin, address newAdmin, uint256 nonce, bytes calldata signature) external onlyRelayer {
         require(currentAdmin == admin, "No es admin");
         require(members[currentAdmin].active, "Admin no es miembro");
@@ -547,3 +562,5 @@ contract SharedWalletFactory {
         return walletsByOwner[owner];
     }
 }
+
+

@@ -240,6 +240,33 @@ export class GroupsService {
     return proposal;
   }
 
+  async transferAdmin(groupId: string, currentAdminId: string, currentAdminWallet: string, newAdminId: string, newAdminWallet: string, nonce: number, signature: string) {
+    const group = await this.repo.findOne({ where: { id: groupId } });
+    if (!group) throw new Error("Grupo no encontrado");
+    if (group.creatorUserId !== currentAdminId) throw new Error("No eres el administrador");
+    if (!group.members.includes(newAdminId)) throw new Error("El nuevo admin no es miembro");
+
+    try {
+      await this.relayer.transferAdminFor(group.contractAddress, currentAdminWallet, newAdminWallet, nonce, signature);
+    } catch (error: any) {
+      console.error("Error executing transferAdminFor on blockchain:", error);
+      throw new BadRequestException(Error en la blockchain: );
+    }
+
+    // Actualizar BD local
+    group.creatorUserId = newAdminId;
+    
+    // Si quedan propuestas de eliminación rechazadas, las borramos o ignoramos
+    await this.deleteProposalRepo.delete({ groupId });
+    await this.repo.save(group);
+
+    for (const member of group.members) {
+      this.notifications.emitAndSave(group.id, "vote", { message: La administración del grupo ha sido transferida a ..., targetUserId: member });
+    }
+
+    return group;
+  }
+
   async changeAdminAndLeave(groupId: string, currentAdminId: string, currentAdminWallet: string, newAdminId: string, newAdminWallet: string, nonce: number, signature: string) {
     const group = await this.repo.findOne({ where: { id: groupId } });
     if (!group) throw new Error("Grupo no encontrado");
@@ -273,3 +300,4 @@ export class GroupsService {
     return group;
   }
 }
+

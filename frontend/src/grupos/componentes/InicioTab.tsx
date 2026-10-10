@@ -18,12 +18,14 @@ interface InicioTabProps {
   onDeleteGroup: (id: string) => void;
   onRenameGroup: (id: string, newName: string) => void;
   onChangeAdminLeave: (groupId: string, newAdminId: string, newAdminWallet: string) => void;
+  onTransferAdmin: (groupId: string, newAdminId: string, newAdminWallet: string) => void;
   onCancelDeleteProposal?: (groupId: string) => void;
   isLoadingDetails?: boolean;
 }
 
 
-export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend, onProposeLimit, onDeleteGroup, onRenameGroup, onChangeAdminLeave, isLoadingDetails, onCancelDeleteProposal }: InicioTabProps) {
+export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend, onProposeLimit, onDeleteGroup, onRenameGroup, onChangeAdminLeave,
+  onTransferAdmin, isLoadingDetails, onCancelDeleteProposal }: InicioTabProps) {
   const activeGroup = groups.find((g) => g.id === activeGroupId);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
@@ -381,6 +383,8 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
     </div>
   );
 }
+
+
 
 
 

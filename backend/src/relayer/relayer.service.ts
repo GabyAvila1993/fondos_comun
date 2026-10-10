@@ -255,6 +255,12 @@ export class RelayerService {
     return tx.wait();
   }
 
+  async transferAdminFor(groupAddress: string, currentAdmin: string, newAdminWallet: string, nonce: number, signature: string) {
+    const contract = this.groupContract(groupAddress);
+    const tx = await contract.transferAdminFor(currentAdmin, newAdminWallet, nonce, signature);
+    return tx.wait();
+  }
+
   async changeAdminAndLeaveFor(groupAddress: string, currentAdmin: string, newAdminWallet: string, nonce: number, signature: string) {
     const contract = this.groupContract(groupAddress);
     const tx = await contract.changeAdminAndLeaveFor(currentAdmin, newAdminWallet, nonce, signature);

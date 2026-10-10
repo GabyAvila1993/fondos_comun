@@ -76,9 +76,14 @@ export const api = {
   clearDeleteProposal: (token: string, groupId: string) => request(`/groups/${groupId}/propose-delete`, token, { method: 'DELETE' }), voteDelete: (token: string, groupId: string, body: { proposalId: string; approve: boolean }) =>
     request(`/groups/${groupId}/vote-delete`, token, { method: "POST", body: JSON.stringify(body) }),
 
+  transferAdmin: (token: string, groupId: string, body: { newAdminId: string; newAdminWallet: string; nonce: number; signature: string }) =>
+    request(`/groups/$/transfer-admin`, token, { method: "POST", body: JSON.stringify(body) }),
+
   changeAdminLeave: (token: string, groupId: string, body: { newAdminId: string; newAdminWallet: string; nonce: number; signature: string }) =>
     request(`/groups/${groupId}/change-admin-leave`, token, { method: "POST", body: JSON.stringify(body) }),
 
   updateGroup: (token: string, groupId: string, body: { name: string }) =>
     request(`/groups/${groupId}`, token, { method: "PATCH", body: JSON.stringify(body) }),
 };
+
+

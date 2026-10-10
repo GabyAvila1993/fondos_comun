@@ -211,7 +211,7 @@ export default function UserDashboard() {
         if (g.deposits === undefined && g.id !== activeGroupId) {
           try {
             const full = await api.getGroup(token, g.id);
-            setGroups(prev => prev.map(pg => pg.id === g.id ? { ...pg, ...full, isCreator: pg.isCreator } : pg));
+            setGroups(prev => prev.map(pg => pg.id === g.id ? { ...pg, ...full, isCreator: full.isCreator ?? pg.isCreator } : pg));
           } catch (e) {
             console.error("Error background fetching group", g.id, e);
           }
@@ -232,7 +232,7 @@ export default function UserDashboard() {
       const token = await getAccessToken();
       if (!token) return;
       const full = await api.getGroup(token, id);
-      setGroups(prev => prev.map(g => g.id === id ? { ...g, ...full, isCreator: g.isCreator } : g));
+      setGroups(prev => prev.map(g => g.id === id ? { ...g, ...full, isCreator: full.isCreator ?? g.isCreator } : g));
     } catch (e) {
       console.error("Error fetching group details", e);
     } finally {
@@ -512,6 +512,64 @@ export default function UserDashboard() {
     }
   };
 
+  const handleTransferAdmin = async (groupId: string, newAdminId: string, newAdminWallet: string) => {
+    if (!activeGroup) return;
+    let tid: string | undefined;
+    try {
+      const token = await getAccessToken();
+      if (!token) return;
+
+      const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+      if (!embeddedWallet) throw new Error("Wallet no encontrada");
+
+      const { nonce } = await api.getNonce(token, activeGroup.id);
+      
+      const message = {
+        currentAdmin: user?.wallet?.address,
+        newAdmin: newAdminWallet,
+        nonce: parseInt(nonce, 10)
+      };
+
+      const domain = {
+        name: "FondoComun",
+        version: "1",
+        chainId: 10143,
+        verifyingContract: activeGroup.contractAddress as `0x${string}`
+      };
+
+      const types = {
+        TransferAdmin: [
+          { name: "currentAdmin", type: "address" },
+          { name: "newAdmin", type: "address" },
+          { name: "nonce", type: "uint256" }
+        ]
+      };
+
+      const provider = await embeddedWallet.getEthereumProvider();
+      tid = toast.loading("Por favor firma la meta-transacci�n en tu wallet...");
+      const signature = await provider.request({
+        method: "eth_signTypedData_v4",
+        params: [
+          user?.wallet?.address,
+          JSON.stringify({
+            domain,
+            types,
+            primaryType: "TransferAdmin",
+            message
+          })
+        ]
+      });
+      toast.loading("Ejecutando transferencia...", { id: tid });
+
+      await api.transferAdmin(token, groupId, { newAdminId, newAdminWallet, nonce: parseInt(nonce, 10), signature: signature as string });
+      toast.success("Administraci�n transferida con �xito.", { id: tid });
+      fetchGroupDetails(groupId);
+    } catch (err: any) {
+      toast.error("Error al transferir: " + err.message);
+      toast.dismiss(tid);
+    }
+  };
+
   const handleChangeAdminLeave = async (groupId: string, newAdminId: string, newAdminWallet: string) => {
     if (!activeGroup) return;
     let tid: string | undefined;
@@ -588,6 +646,7 @@ export default function UserDashboard() {
             onDeleteGroup={handleDeleteGroup}
             onRenameGroup={handleRenameGroup}
             onChangeAdminLeave={handleChangeAdminLeave}
+            onTransferAdmin={handleTransferAdmin}
               onCancelDeleteProposal={handleCancelDeleteProposal}
                         isLoadingDetails={isLoadingDetails}
           />
@@ -692,5 +751,9 @@ export default function UserDashboard() {
     </div>
   );
 }
+
+
+
+
 
 

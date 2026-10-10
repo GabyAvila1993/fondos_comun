@@ -316,6 +316,19 @@ export class GroupsController {
     return proposal;
   }
 
+  @Post(":id/transfer-admin")
+  async transferAdmin(@Req() req: any, @Param("id") groupId: string, @Body() body: { newAdminId: string; newAdminWallet: string; nonce: number; signature: string }) {
+    const user = await this.currentUser(req);
+    const group = await this.groups.transferAdmin(groupId, user.id, user.walletAddress!, body.newAdminId, body.newAdminWallet, body.nonce, body.signature);
+    
+    this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
+      type: "system",
+      message: CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador anterior')} ha transferido la administracion.,
+    });
+    
+    return group;
+  }
+
   @Post(":id/change-admin-leave")
   async changeAdminLeave(@Req() req: any, @Param("id") groupId: string, @Body() body: { newAdminId: string; newAdminWallet: string; nonce: number; signature: string }) {
     const user = await this.currentUser(req);
@@ -335,6 +348,7 @@ export class GroupsController {
     return this.groups.updateName(groupId, user.id, body.name);
   }
 }
+
 
 
 
