@@ -250,18 +250,18 @@ export class GroupsService {
       await this.relayer.transferAdminFor(group.contractAddress, currentAdminWallet, newAdminWallet, nonce, signature);
     } catch (error: any) {
       console.error("Error executing transferAdminFor on blockchain:", error);
-      throw new BadRequestException(Error en la blockchain: );
+      throw new BadRequestException(`Error en la blockchain: ${error.message || 'No se pudo ejecutar la transaccion'}`);
     }
 
     // Actualizar BD local
     group.creatorUserId = newAdminId;
     
-    // Si quedan propuestas de eliminación rechazadas, las borramos o ignoramos
+    // Si quedan propuestas de eliminaciï¿½n rechazadas, las borramos o ignoramos
     await this.deleteProposalRepo.delete({ groupId });
     await this.repo.save(group);
 
     for (const member of group.members) {
-      this.notifications.emitAndSave(group.id, "vote", { message: La administración del grupo ha sido transferida a ..., targetUserId: member });
+      this.notifications.emitAndSave(group.id, "vote", { message: `La administracion del grupo ha sido transferida a ${newAdminWallet.substring(0,6)}...`, targetUserId: member });
     }
 
     return group;

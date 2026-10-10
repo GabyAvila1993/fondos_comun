@@ -137,7 +137,7 @@ export class GroupsController {
     return this.groups.create(body.name, user.id, user.walletAddress, body.creditLimit, body.dailyLimit);
   }
 
-  /** Paso 1 del flujo "unirme/gastar/votóóar": el front pide el nonce actual para armar la firma. */
+  /** Paso 1 del flujo "unirme/gastar/votï¿½ï¿½ar": el front pide el nonce actual para armar la firma. */
   @Get(":id/nonce")
   async getNonce(@Req() req: any, @Param("id") groupId: string) {
     try {
@@ -178,7 +178,7 @@ export class GroupsController {
     const userName = user.name || (user.email ? user.email.split('@')[0] : 'Alguien');
     this.notifications.emitAndSave(group!.id, "new_movement", { targetUserIds: group!.members, 
       type: "deposit",
-      message: `CAMBIO EN EL GRUPO ${group!.name}: ${userName} ingresó ${body.fiatAmount} al fondo comun.`
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${userName} ingresï¿½ ${body.fiatAmount} al fondo comun.`
     });
     return { ok: true };
   }
@@ -323,7 +323,7 @@ export class GroupsController {
     
     this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
       type: "system",
-      message: CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador anterior')} ha transferido la administracion.,
+      message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador anterior')} ha transferido la administracion.`,
     });
     
     return group;
