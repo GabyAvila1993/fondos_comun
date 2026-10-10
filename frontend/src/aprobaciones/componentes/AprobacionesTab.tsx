@@ -207,12 +207,13 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
               </div>
 
               <div className="approval-content">
-                <div className="approval-title">{tx.desc || "Solicitud de gasto sin descripci√≥n"}</div>
+                <div className="approval-title">{(() => { const match = (tx.desc || "").match(/(.*?)(?:\|ARS:(\d+(?:\.\d+)?))?$/); return match?.[1] || tx.desc || "Solicitud de gasto"; })()}</div>
                 
                 <div className="approval-amounts">
                   <div>
                     <div className="approval-amount-label">Monto Solicitado</div>
                     <div className="approval-amount-value">{fmt(amount * 1000)}</div>
+                      {(() => { const match = (tx.desc || "").match(/(.*?)(?:\|ARS:(\d+(?:\.\d+)?))?$/); return match?.[2] ? <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "2px" }}>ò {fmt(Number(match[2]))} ARS</div> : null; })()}
                   </div>
                   {exceed && (
                     <div style={{ textAlign: "right" }}>
@@ -257,3 +258,6 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
     </div>
   );
 }
+
+
+
