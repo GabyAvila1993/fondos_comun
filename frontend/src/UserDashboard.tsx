@@ -67,7 +67,7 @@ export default function UserDashboard() {
           icon: "🗳️",
           style: { borderRadius: '10px', background: 'var(--card-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' },
         });
-        if (data.groupId) fetchGroupDetails(data.groupId, 500);
+        if (data.groupId) fetchGroupDetails(data.groupId, 2000);
       }
     };
 
@@ -91,7 +91,7 @@ export default function UserDashboard() {
           icon: "👋",
           style: { borderRadius: '10px', background: 'var(--card-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' },
         });
-        if (data.groupId) fetchGroupDetails(data.groupId, 500);
+        if (data.groupId) fetchGroupDetails(data.groupId, 2000);
         else loadBasicData();
       }
     };
@@ -692,4 +692,5 @@ export default function UserDashboard() {
     </div>
   );
 }
+
 

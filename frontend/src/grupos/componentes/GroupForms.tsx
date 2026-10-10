@@ -351,7 +351,7 @@ function SpendForm({ limit, onSubmit, error, loading }: { limit: number; onSubmi
 
       {exceeds && amount !== "" && (
         <div style={{ background: "var(--danger-light)", color: "var(--danger)", padding: "12px", borderRadius: "12px", fontSize: "0.85rem", marginBottom: "20px" }}>
-          Al superar el límite libre de ${limit}, este gasto pasará a <strong>Votación Mayoritaria</strong>.
+          Al superar el límite libre de ${Math.round(limit).toLocaleString("es-AR")}, este gasto pasará a <strong>Votación Mayoritaria</strong>.
         </div>
       )}
 
@@ -423,3 +423,4 @@ function ProposeLimitForm({ onSubmit, error, loading }: { onSubmit: (a: number) 
     </div>
   );
 }
+
