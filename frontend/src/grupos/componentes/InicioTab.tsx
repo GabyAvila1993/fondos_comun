@@ -298,6 +298,86 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
           </div>
         </div>
       </Sheet>
+
+      <Sheet isOpen={!!groupToTransfer} onClose={() => { setGroupToTransfer(null); setNewAdminConfirmed(false); setSelectedNewAdminId(""); }} title="Transferir administración">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '8px' }}>
+          <p style={{ color: "var(--text-muted)", marginBottom: "0px", marginTop: "-16px" }}>
+            Selecciona a quién deseas transferirle el grupo <strong>{groupToTransfer ? getGroupName(groupToTransfer) : ''}</strong>:
+          </p>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <select 
+              className="form-input" 
+              style={{ background: "white" }}
+              value={selectedNewAdminId}
+              onChange={(e) => {
+                setSelectedNewAdminId(e.target.value);
+                setNewAdminConfirmed(false);
+              }}
+            >
+              <option value="">Seleccionar nuevo administrador...</option>
+              {groupToTransfer?.members?.filter(m => m !== userId).map(memberId => (
+                <option key={memberId} value={memberId}>
+                  {groupToTransfer.usersMap?.[memberId] ? formatUserName(groupToTransfer.usersMap[memberId]) : `Usuario ${memberId.substring(0,6)}...`}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {!newAdminConfirmed ? (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                className="btn-outline"
+                disabled={!selectedNewAdminId}
+                onClick={() => setNewAdminConfirmed(true)}
+                style={{ flex: 1, opacity: !selectedNewAdminId ? 0.5 : 1 }}
+              >
+                Confirmar nuevo admin
+              </button>
+              <button 
+                className="btn-outline"
+                style={{ flex: 1, background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}
+                onClick={() => { setGroupToTransfer(null); setNewAdminConfirmed(false); setSelectedNewAdminId(""); }}
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                className="btn-outline"
+                onClick={() => setNewAdminConfirmed(false)}
+                style={{ flex: 1 }}
+              >
+                Atrás
+              </button>
+              <button 
+                className="btn-primary"
+                onClick={() => {
+                  if (groupToTransfer) {
+                    const wallet = groupToTransfer.usersMap?.[selectedNewAdminId]?.walletAddress;
+                    if (!wallet) {
+                      toast.error("El usuario seleccionado no tiene una wallet válida.");
+                      return;
+                    }
+                    onChangeAdminLeave(groupToTransfer.id, selectedNewAdminId, wallet);
+                    setGroupToTransfer(null);
+                    setNewAdminConfirmed(false);
+                    setSelectedNewAdminId("");
+                  }
+                }}
+                style={{ 
+                  flex: 1,
+                  background: "#dc2626",
+                  color: "white",
+                  border: "none"
+                }}
+              >
+                Transferir y Salir
+              </button>
+            </div>
+          )}
+        </div>
+      </Sheet>
     </div>
   );
 }
