@@ -525,7 +525,8 @@ export default function UserDashboard() {
   };
 
   const handleTransferAdmin = async (groupId: string, newAdminId: string, newAdminWallet: string) => {
-    if (!activeGroup) return;
+    const targetGroup = groups.find(g => g.id === groupId) || activeGroup;
+    if (!targetGroup) return;
     let tid: string | undefined;
     try {
       const token = await getAccessToken();
@@ -534,7 +535,7 @@ export default function UserDashboard() {
       const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
       if (!embeddedWallet) throw new Error("Wallet no encontrada");
 
-      const { nonce } = await api.getNonce(token, activeGroup.id);
+      const { nonce } = await api.getNonce(token, targetGroup.id);
       
       const message = {
         currentAdmin: user?.wallet?.address,
@@ -542,40 +543,22 @@ export default function UserDashboard() {
         nonce: parseInt(nonce, 10)
       };
 
-      const domain = {
-        name: "FondoComun",
-        version: "1",
-        chainId: 10143,
-        verifyingContract: activeGroup.contractAddress as `0x${string}`
-      };
+      tid = toast.loading("Firmando transferencia de administración...");
+      const signature = await signTyped(embeddedWallet, "TransferAdmin", targetGroup.contractAddress, message);
 
-      const types = {
-        TransferAdmin: [
-          { name: "currentAdmin", type: "address" },
-          { name: "newAdmin", type: "address" },
-          { name: "nonce", type: "uint256" }
-        ]
-      };
-
-      const provider = await embeddedWallet.getEthereumProvider();
-      tid = toast.loading("Por favor firma la meta-transacci�n en tu wallet...");
-      const signature = await provider.request({
-        method: "eth_signTypedData_v4",
-        params: [
-          user?.wallet?.address,
-          JSON.stringify({
-            domain,
-            types,
-            primaryType: "TransferAdmin",
-            message
-          })
-        ]
-      });
       toast.loading("Ejecutando transferencia...", { id: tid });
+      const start = Date.now();
+      await api.transferAdmin(token, targetGroup.id, {
+        newAdminId,
+        newAdminWallet,
+        nonce: parseInt(nonce, 10),
+        signature
+      });
+      const end = Date.now();
 
-      await api.transferAdmin(token, groupId, { newAdminId, newAdminWallet, nonce: parseInt(nonce, 10), signature: signature as string });
-      toast.success("Administraci�n transferida con �xito.", { id: tid });
-      fetchGroupDetails(groupId);
+      toast.success(`¡Administración transferida con éxito en ${(end - start) / 1000}s! ⚡️`, { id: tid });
+      fetchGroupDetails(targetGroup.id);
+      loadBasicData();
     } catch (err: any) {
       toast.error("Error al transferir: " + err.message);
       toast.dismiss(tid);

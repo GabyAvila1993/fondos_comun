@@ -359,8 +359,10 @@ export class GroupsController {
     const user = await this.currentUser(req);
     const group = await this.groups.transferAdmin(groupId, user.id, user.walletAddress!, body.newAdminId, body.newAdminWallet, body.nonce, body.signature);
     
-    this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
+    this.notifications.emitAndSave(groupId, "system", { 
+      targetUserIds: group!.members, 
       type: "system",
+      groupId: groupId,
       message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador anterior')} ha transferido la administracion.`,
     });
     

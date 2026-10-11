@@ -254,9 +254,9 @@ export class GroupsService {
 
   async transferAdmin(groupId: string, currentAdminId: string, currentAdminWallet: string, newAdminId: string, newAdminWallet: string, nonce: number, signature: string) {
     const group = await this.repo.findOne({ where: { id: groupId } });
-    if (!group) throw new Error("Grupo no encontrado");
-    if (group.creatorUserId !== currentAdminId) throw new Error("No eres el administrador");
-    if (!group.members.includes(newAdminId)) throw new Error("El nuevo admin no es miembro");
+    if (!group) throw new BadRequestException("Grupo no encontrado");
+    if (group.creatorUserId !== currentAdminId) throw new BadRequestException("No eres el administrador");
+    if (!group.members.includes(newAdminId)) throw new BadRequestException("El nuevo admin no es miembro");
 
     try {
       await this.relayer.transferAdminFor(group.contractAddress, currentAdminWallet, newAdminWallet, nonce, signature);
@@ -285,10 +285,10 @@ export class GroupsService {
 
   async changeAdminAndLeave(groupId: string, currentAdminId: string, currentAdminWallet: string, newAdminId: string, newAdminWallet: string, nonce: number, signature: string) {
     const group = await this.repo.findOne({ where: { id: groupId } });
-    if (!group) throw new Error("Grupo no encontrado");
-    if (group.creatorUserId !== currentAdminId) throw new Error("No eres el administrador");
+    if (!group) throw new BadRequestException("Grupo no encontrado");
+    if (group.creatorUserId !== currentAdminId) throw new BadRequestException("No eres el administrador");
 
-    if (!group.members.includes(newAdminId)) throw new Error("El nuevo admin no es miembro");
+    if (!group.members.includes(newAdminId)) throw new BadRequestException("El nuevo admin no es miembro");
 
     // Enviar a la blockchain
     try {

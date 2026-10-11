@@ -49,6 +49,11 @@ export const TYPES = {
     { name: "newAdmin", type: "address" },
     { name: "nonce", type: "uint256" },
   ],
+  TransferAdmin: [
+    { name: "currentAdmin", type: "address" },
+    { name: "newAdmin", type: "address" },
+    { name: "nonce", type: "uint256" },
+  ],
 };
 
 /**
@@ -58,7 +63,7 @@ export const TYPES = {
  */
 export async function signTyped(
   wallet: { getEthereumProvider: () => Promise<any> },
-  primaryType: "RequestExpense" | "Vote" | "Join" | "ProposeLimit" | "VoteLimit" | "ChangeAdmin",
+  primaryType: "RequestExpense" | "Vote" | "Join" | "ProposeLimit" | "VoteLimit" | "ChangeAdmin" | "TransferAdmin",
   contractAddress: string,
   message: Record<string, any>,
 ) {
