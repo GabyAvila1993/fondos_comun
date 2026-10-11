@@ -179,7 +179,7 @@ export class GroupsService {
       groupId,
       creatorUserId: userId,
       status: "pending",
-      votós: [],
+      votes: [],
     });
     await this.deleteProposalRepo.save(proposal);
 
@@ -192,7 +192,7 @@ export class GroupsService {
     return proposal;
   }
 
-  async votóDelete(proposalId: string, userId: string, approve: boolean) {
+  async voteDelete(proposalId: string, userId: string, approve: boolean) {
     const proposal = await this.deleteProposalRepo.findOne({ where: { id: proposalId } });
     if (!proposal) throw new Error("Propuesta no encontrada");
     if (proposal.status !== "pending") throw new Error("La propuesta ya fue resuelta");
@@ -203,25 +203,25 @@ export class GroupsService {
     if (!group.members.includes(userId)) throw new Error("No eres miembro del grupo");
     if (userId === proposal.creatorUserId) throw new Error("El creador no votó");
 
-    const existingvotóIndex = proposal.votós.findIndex(v => v.userId === userId);
+    const existingvotóIndex = proposal.votes.findIndex(v => v.userId === userId);
     if (existingvotóIndex >= 0) {
-      proposal.votós[existingvotóIndex].approve = approve;
+      proposal.votes[existingvotóIndex].approve = approve;
     } else {
-      proposal.votós.push({ userId, approve });
+      proposal.votes.push({ userId, approve });
     }
 
     // Comprobar mayoría
     const totalvotórs = group.members.length - 1; // Excluye creador
     const majority = Math.floor(totalvotórs / 2) + 1;
 
-    let votósFor = 0;
-    let votósAgainst = 0;
-    for (const v of proposal.votós) {
-      if (v.approve) votósFor++;
-      else votósAgainst++;
+    let votesFor = 0;
+    let votesAgainst = 0;
+    for (const v of proposal.votes) {
+      if (v.approve) votesFor++;
+      else votesAgainst++;
     }
 
-    if (votósFor >= majority) {
+    if (votesFor >= majority) {
       proposal.status = "approved";
       // Eliminar el grupo
       await this.depositRepo.delete({ groupId: group.id });
@@ -230,7 +230,7 @@ export class GroupsService {
       for (const member of group.members) {
         this.notifications.emitAndSave(group.id, "group_deleted", { message: `El grupo ${group.name} ha sido eliminado por votóción mayoritaria.`, targetUserId: member });
       }
-    } else if (votósAgainst >= majority) {
+    } else if (votesAgainst >= majority) {
       proposal.status = "rejected";
       
       this.notifications.emitAndSave(group.id, "votó", { message: `Los participantes no quieren eliminar el grupo ${group.name}. Si vos te querés ir podés hacerlo transfiriendo el grupo a uno de los integrantes.`, targetUserId: proposal.creatorUserId });

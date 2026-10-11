@@ -207,18 +207,18 @@ export class GroupsController {
     return { ok: true };
   }
 
-  @Post(":id/votó")
-  async votó(
+  @Post(":id/vote")
+  async vote(
     @Req() req: any,
     @Param("id") groupId: string,
     @Body() body: { txId: number; approve: boolean; nonce: string; signature: string },
   ) {
     const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
-    await this.relayer.votó(group!.contractAddress, user.walletAddress, body.txId, body.approve, BigInt(body.nonce), body.signature);
+    await this.relayer.vote(group!.contractAddress, user.walletAddress, body.txId, body.approve, BigInt(body.nonce), body.signature);
     
-    this.notifications.emitAndSave(group!.id, "votó", { targetUserIds: group!.members, 
-      type: "votó",
+    this.notifications.emitAndSave(group!.id, "vote", { targetUserIds: group!.members, 
+      type: "vote",
       message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} votó ${body.approve ? 'a favor' : 'en contra'} del gasto #${body.txId}`
     });
 
@@ -251,15 +251,15 @@ export class GroupsController {
     }
   }
 
-  @Post(":id/limit-votó")
-  async votóLimit(
+  @Post(":id/limit-vote")
+  async voteLimit(
     @Req() req: any,
     @Param("id") groupId: string,
     @Body() body: { proposalId: number; approve: boolean; nonce: string; signature: string },
   ) {
     const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
-    await this.relayer.votóLimitChange(
+    await this.relayer.voteLimitChange(
       group!.contractAddress,
       user.walletAddress,
       body.proposalId,
@@ -267,8 +267,8 @@ export class GroupsController {
       BigInt(body.nonce),
       body.signature,
     );
-    this.notifications.emitAndSave(group!.id, "votó", { targetUserIds: group!.members, 
-      type: "votó",
+    this.notifications.emitAndSave(group!.id, "vote", { targetUserIds: group!.members, 
+      type: "vote",
       message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} votó ${body.approve ? 'a favor' : 'en contra'} del cambio de límite #${body.proposalId}`,
     });
     return { ok: true };
@@ -302,11 +302,11 @@ export class GroupsController {
     return { ok: true };
   }
 
-  @Post(":id/votó-delete")
-  async votóDeleteGroup(@Req() req: any, @Param("id") groupId: string, @Body() body: { proposalId: string; approve: boolean }) {
+  @Post(":id/vote-delete")
+  async voteDeleteGroup(@Req() req: any, @Param("id") groupId: string, @Body() body: { proposalId: string; approve: boolean }) {
     const user = await this.currentUser(req);
     const group = await this.groups.findOne(groupId);
-    const proposal = await this.groups.votóDelete(body.proposalId, user.id, body.approve);
+    const proposal = await this.groups.voteDelete(body.proposalId, user.id, body.approve);
     
     this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
       type: "system",
