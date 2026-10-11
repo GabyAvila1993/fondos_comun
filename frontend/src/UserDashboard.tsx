@@ -700,14 +700,7 @@ export default function UserDashboard() {
                 }
               }
             }}
-            onEditName={async (newName) => {
-              try {
-                const token = await getAccessToken();
-                if (token) await api.updateProfile(token, newName);
-              } catch (e) {
-                console.error("Error updating profile", e);
-              }
-            }}
+            onEditName={async (newName) => { try { const token = await getAccessToken(); if (token) { await api.updateProfile(token, newName); toast.success('Nombre actualizado en el servidor'); await loadBasicData(); } } catch (e) { console.error('Error updating profile', e); toast.error('Error al guardar nombre en el servidor'); } }}
             onNavigateToVote={(groupId) => {
               setActiveGroupId(groupId);
               setActiveTab("aprobaciones");
@@ -751,6 +744,8 @@ export default function UserDashboard() {
     </div>
   );
 }
+
+
 
 
 
