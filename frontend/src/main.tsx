@@ -4,6 +4,9 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import App from "./App";
 import { ENV } from "./env";
 import "./compartido/estilos/app.css";
+import { registerSW } from "virtual:pwa-register";
+
+registerSW({ immediate: true });
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
