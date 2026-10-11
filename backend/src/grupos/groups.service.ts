@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
+﻿import { Injectable, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Group } from "./group.entity";
@@ -179,20 +179,20 @@ export class GroupsService {
       groupId,
       creatorUserId: userId,
       status: "pending",
-      votes: [],
+      votós: [],
     });
     await this.deleteProposalRepo.save(proposal);
 
     for (const member of group.members) {
       if (member !== userId) {
-        this.notifications.emitAndSave(group.id, "vote", { message: `El administrador propuso eliminar el grupo ${group.name}. Requiere votación.`, targetUserId: member });
+        this.notifications.emitAndSave(group.id, "votó", { message: `El administrador propuso eliminar el grupo ${group.name}. Requiere votóción.`, targetUserId: member });
       }
     }
 
     return proposal;
   }
 
-  async voteDelete(proposalId: string, userId: string, approve: boolean) {
+  async votóDelete(proposalId: string, userId: string, approve: boolean) {
     const proposal = await this.deleteProposalRepo.findOne({ where: { id: proposalId } });
     if (!proposal) throw new Error("Propuesta no encontrada");
     if (proposal.status !== "pending") throw new Error("La propuesta ya fue resuelta");
@@ -201,39 +201,39 @@ export class GroupsService {
     if (!group) throw new Error("Grupo no encontrado");
 
     if (!group.members.includes(userId)) throw new Error("No eres miembro del grupo");
-    if (userId === proposal.creatorUserId) throw new Error("El creador no vota");
+    if (userId === proposal.creatorUserId) throw new Error("El creador no votó");
 
-    const existingVoteIndex = proposal.votes.findIndex(v => v.userId === userId);
-    if (existingVoteIndex >= 0) {
-      proposal.votes[existingVoteIndex].approve = approve;
+    const existingvotóIndex = proposal.votós.findIndex(v => v.userId === userId);
+    if (existingvotóIndex >= 0) {
+      proposal.votós[existingvotóIndex].approve = approve;
     } else {
-      proposal.votes.push({ userId, approve });
+      proposal.votós.push({ userId, approve });
     }
 
     // Comprobar mayoría
-    const totalVoters = group.members.length - 1; // Excluye creador
-    const majority = Math.floor(totalVoters / 2) + 1;
+    const totalvotórs = group.members.length - 1; // Excluye creador
+    const majority = Math.floor(totalvotórs / 2) + 1;
 
-    let votesFor = 0;
-    let votesAgainst = 0;
-    for (const v of proposal.votes) {
-      if (v.approve) votesFor++;
-      else votesAgainst++;
+    let votósFor = 0;
+    let votósAgainst = 0;
+    for (const v of proposal.votós) {
+      if (v.approve) votósFor++;
+      else votósAgainst++;
     }
 
-    if (votesFor >= majority) {
+    if (votósFor >= majority) {
       proposal.status = "approved";
       // Eliminar el grupo
       await this.depositRepo.delete({ groupId: group.id });
       await this.repo.delete(group.id);
 
       for (const member of group.members) {
-        this.notifications.emitAndSave(group.id, "group_deleted", { message: `El grupo ${group.name} ha sido eliminado por votación mayoritaria.`, targetUserId: member });
+        this.notifications.emitAndSave(group.id, "group_deleted", { message: `El grupo ${group.name} ha sido eliminado por votóción mayoritaria.`, targetUserId: member });
       }
-    } else if (votesAgainst >= majority) {
+    } else if (votósAgainst >= majority) {
       proposal.status = "rejected";
       
-      this.notifications.emitAndSave(group.id, "vote", { message: `Los participantes no quieren eliminar el grupo ${group.name}. Si vos te querés ir podés hacerlo transfiriendo el grupo a uno de los integrantes.`, targetUserId: proposal.creatorUserId });
+      this.notifications.emitAndSave(group.id, "votó", { message: `Los participantes no quieren eliminar el grupo ${group.name}. Si vos te querés ir podés hacerlo transfiriendo el grupo a uno de los integrantes.`, targetUserId: proposal.creatorUserId });
     }
 
     await this.deleteProposalRepo.save(proposal);
@@ -261,7 +261,7 @@ export class GroupsService {
     await this.repo.save(group);
 
     for (const member of group.members) {
-      this.notifications.emitAndSave(group.id, "vote", { message: `La administracion del grupo ha sido transferida a ${newAdminWallet.substring(0,6)}...`, targetUserId: member });
+      this.notifications.emitAndSave(group.id, "votó", { message: `La administracion del grupo ha sido transferida a ${newAdminWallet.substring(0,6)}...`, targetUserId: member });
     }
 
     return group;
@@ -294,10 +294,11 @@ export class GroupsService {
     await this.repo.save(group);
 
     for (const member of group.members) {
-      this.notifications.emitAndSave(group.id, "vote", { message: `El administrador anterior abandonó el grupo. El nuevo administrador es ${newAdminWallet.substring(0,6)}...`, targetUserId: member });
+      this.notifications.emitAndSave(group.id, "votó", { message: `El administrador anterior abandonó el grupo. El nuevo administrador es ${newAdminWallet.substring(0,6)}...`, targetUserId: member });
     }
 
     return group;
   }
 }
+
 
