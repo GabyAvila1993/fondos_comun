@@ -1,4 +1,4 @@
-﻿import { Injectable, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Group } from "./group.entity";
@@ -134,10 +134,10 @@ export class GroupsService {
     }
     
     if (members.length > 1) {
-      throw new Error("No puedes eliminar un grupo con otros miembros directamente. Debes proponer su eliminación.");
+      throw new Error("No puedes eliminar un grupo con otros miembros directamente. Debes proponer su eliminaciÃ³n.");
     }
     
-    // Eliminar depósitos asociados primero
+    // Eliminar depÃ³sitos asociados primero
     await this.depositRepo.delete({ groupId: id });
     // Eliminar grupo
     await this.repo.delete(id);
@@ -185,7 +185,11 @@ export class GroupsService {
 
     for (const member of group.members) {
       if (member !== userId) {
-        this.notifications.emitAndSave(group.id, "votó", { message: `El administrador propuso eliminar el grupo ${group.name}. Requiere votóción.`, targetUserId: member });
+        this.notifications.emitAndSave(group.id, "vote", { 
+          message: `El administrador propuso eliminar el grupo ${group.name}. Requiere votacion.`, 
+          targetUserId: member,
+          groupId: group.id 
+        });
       }
     }
 
@@ -201,18 +205,18 @@ export class GroupsService {
     if (!group) throw new Error("Grupo no encontrado");
 
     if (!group.members.includes(userId)) throw new Error("No eres miembro del grupo");
-    if (userId === proposal.creatorUserId) throw new Error("El creador no votó");
+    if (userId === proposal.creatorUserId) throw new Error("El creador no vota");
 
-    const existingvotóIndex = proposal.votes.findIndex(v => v.userId === userId);
-    if (existingvotóIndex >= 0) {
-      proposal.votes[existingvotóIndex].approve = approve;
+    const existingVoteIndex = proposal.votes.findIndex(v => v.userId === userId);
+    if (existingVoteIndex >= 0) {
+      proposal.votes[existingVoteIndex].approve = approve;
     } else {
       proposal.votes.push({ userId, approve });
     }
 
-    // Comprobar mayoría
-    const totalvotórs = group.members.length - 1; // Excluye creador
-    const majority = Math.floor(totalvotórs / 2) + 1;
+    // Comprobar mayoria
+    const totalVoters = group.members.length - 1; // Excluye creador
+    const majority = Math.floor(totalVoters / 2) + 1;
 
     let votesFor = 0;
     let votesAgainst = 0;
@@ -228,12 +232,20 @@ export class GroupsService {
       await this.repo.delete(group.id);
 
       for (const member of group.members) {
-        this.notifications.emitAndSave(group.id, "group_deleted", { message: `El grupo ${group.name} ha sido eliminado por votóción mayoritaria.`, targetUserId: member });
+        this.notifications.emitAndSave(group.id, "group_deleted", { 
+          message: `El grupo ${group.name} ha sido eliminado por votacion mayoritaria.`, 
+          targetUserId: member,
+          groupId: group.id 
+        });
       }
-    } else if (votesAgainst >= majority) {
+    } else if (votesAgainst >= majority || (proposal.votes.length >= totalVoters && votesFor < majority)) {
       proposal.status = "rejected";
       
-      this.notifications.emitAndSave(group.id, "votó", { message: `Los participantes no quieren eliminar el grupo ${group.name}. Si vos te querés ir podés hacerlo transfiriendo el grupo a uno de los integrantes.`, targetUserId: proposal.creatorUserId });
+      this.notifications.emitAndSave(group.id, "vote", { 
+        message: `Los participantes no quieren eliminar el grupo ${group.name}. Si vos te queres ir podes hacerlo transfiriendo el grupo a uno de los integrantes.`, 
+        targetUserId: proposal.creatorUserId,
+        groupId: group.id 
+      });
     }
 
     await this.deleteProposalRepo.save(proposal);
@@ -256,12 +268,16 @@ export class GroupsService {
     // Actualizar BD local
     group.creatorUserId = newAdminId;
     
-    // Si quedan propuestas de eliminaci�n rechazadas, las borramos o ignoramos
+    // Si quedan propuestas de eliminacion rechazadas, las borramos o ignoramos
     await this.deleteProposalRepo.delete({ groupId });
     await this.repo.save(group);
 
     for (const member of group.members) {
-      this.notifications.emitAndSave(group.id, "votó", { message: `La administracion del grupo ha sido transferida a ${newAdminWallet.substring(0,6)}...`, targetUserId: member });
+      this.notifications.emitAndSave(group.id, "system", { 
+        message: `La administracion del grupo ha sido transferida a ${newAdminWallet.substring(0,6)}...`, 
+        targetUserId: member,
+        groupId: group.id 
+      });
     }
 
     return group;
@@ -279,7 +295,7 @@ export class GroupsService {
       await this.relayer.changeAdminAndLeaveFor(group.contractAddress, currentAdminWallet, newAdminWallet, nonce, signature);
     } catch (error: any) {
       console.error("Error executing changeAdminAndLeaveFor on blockchain:", error);
-      throw new BadRequestException(`Error en la blockchain: ${error.message || 'No se pudo ejecutar la transacción'}`);
+      throw new BadRequestException(`Error en la blockchain: ${error.message || 'No se pudo ejecutar la transaccion'}`);
     }
 
     console.log(`[changeAdminAndLeave] Success on chain. currentAdminId: ${currentAdminId}, newAdminId: ${newAdminId}, prevCreator: ${group.creatorUserId}, prevMembers: ${JSON.stringify(group.members)}`);
@@ -288,13 +304,17 @@ export class GroupsService {
     group.creatorUserId = newAdminId;
     group.members = group.members.filter(m => m !== currentAdminId && m !== "");
     
-    // Si quedan propuestas de eliminación rechazadas, las borramos o ignoramos
+    // Si quedan propuestas de eliminacion rechazadas, las borramos o ignoramos
     await this.deleteProposalRepo.delete({ groupId });
 
     await this.repo.save(group);
 
     for (const member of group.members) {
-      this.notifications.emitAndSave(group.id, "votó", { message: `El administrador anterior abandonó el grupo. El nuevo administrador es ${newAdminWallet.substring(0,6)}...`, targetUserId: member });
+      this.notifications.emitAndSave(group.id, "system", { 
+        message: `El administrador anterior abandono el grupo. El nuevo administrador es ${newAdminWallet.substring(0,6)}...`, 
+        targetUserId: member,
+        groupId: group.id 
+      });
     }
 
     return group;

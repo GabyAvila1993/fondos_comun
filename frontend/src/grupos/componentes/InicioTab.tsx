@@ -159,6 +159,116 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
         </button>
       </div>
       
+      {/* Alerta de Votación de Eliminación Denegada (Cartel Rojo) */}
+      {(() => {
+        const targetG = (activeGroup && (activeGroup.deleteProposals || []).some(p => p.status === "rejected")) 
+          ? activeGroup 
+          : groups.find(g => g.isCreator && (g.deleteProposals || []).some(p => p.status === "rejected"));
+        if (!targetG || !targetG.isCreator) return null;
+
+        const effectiveUsersMap = targetG.usersMap || activeGroup?.usersMap || {};
+
+        return (
+          <div style={{ background: "#fef2f2", margin: "0 20px 20px 20px", padding: "16px", borderRadius: "12px", border: "1px solid #fecaca" }}>
+            <h4 style={{ color: "#991b1b", marginTop: 0, marginBottom: "8px" }}>Los participantes no quieren eliminar el grupo {getGroupName(targetG)}</h4>
+            <p style={{ color: "#b91c1c", fontSize: "0.9rem", marginBottom: "16px" }}>
+              Si vos te querés ir podés hacerlo transfiriendo el grupo a uno de los integrantes.
+            </p>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <select 
+                className="form-input" 
+                style={{ background: "white" }}
+                value={selectedNewAdminId}
+                onChange={(e) => {
+                  setSelectedNewAdminId(e.target.value);
+                  setNewAdminConfirmed(false);
+                }}
+              >
+                <option value="">Seleccionar nuevo administrador...</option>
+                {targetG.members?.filter(m => m !== userId).map(memberId => (
+                  <option key={memberId} value={memberId}>
+                    {effectiveUsersMap[memberId] ? formatUserName(effectiveUsersMap[memberId]) : `Usuario ${memberId.substring(0,6)}...`}
+                  </option>
+                ))}
+              </select>
+              
+              {!newAdminConfirmed ? (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    className="btn-outline"
+                    disabled={!selectedNewAdminId}
+                    onClick={() => setNewAdminConfirmed(true)}
+                    style={{ flex: 1, opacity: !selectedNewAdminId ? 0.5 : 1 }}
+                  >
+                    Confirmar nuevo admin
+                  </button>
+                  <button 
+                    className="btn-outline"
+                    style={{ flex: 1, background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}
+                    onClick={() => onCancelDeleteProposal && onCancelDeleteProposal(targetG.id)}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    className="btn-outline"
+                    onClick={() => setNewAdminConfirmed(false)}
+                    style={{ flex: 1 }}
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    className="btn-primary"
+                    onClick={() => {
+                      const wallet = effectiveUsersMap[selectedNewAdminId]?.walletAddress;
+                      if (!wallet) {
+                        toast.error("El usuario seleccionado no tiene una wallet válida.");
+                        return;
+                      }
+                      onChangeAdminLeave(targetG.id, selectedNewAdminId, wallet);
+                    }}
+                    style={{ 
+                      flex: 1,
+                      background: "#dc2626",
+                      color: "white",
+                      border: "none"
+                    }}
+                  >
+                    Salir del grupo
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Alerta de Votación de Eliminación en Curso */}
+      {(() => {
+        const targetG = (activeGroup && (activeGroup.deleteProposals || []).some(p => p.status === "pending")) 
+          ? activeGroup 
+          : groups.find(g => g.isCreator && (g.deleteProposals || []).some(p => p.status === "pending"));
+        if (!targetG || !targetG.isCreator) return null;
+
+        return (
+          <div style={{ background: "#eff6ff", margin: "0 20px 20px 20px", padding: "16px", borderRadius: "12px", border: "1px solid #bfdbfe" }}>
+            <h4 style={{ color: "#1e40af", marginTop: 0, marginBottom: "8px" }}>Votación de eliminación en curso ({getGroupName(targetG)})</h4>
+            <p style={{ color: "#1e3a8a", fontSize: "0.9rem", marginBottom: "16px" }}>
+              Has propuesto eliminar el grupo. Esperando el voto de los demás integrantes para aprobar o rechazar la eliminación.
+            </p>
+            <button 
+              className="btn-outline"
+              style={{ width: "100%", background: "white", color: "#1e40af", borderColor: "#93c5fd" }}
+              onClick={() => onCancelDeleteProposal && onCancelDeleteProposal(targetG.id)}
+            >
+              Cancelar propuesta de eliminación
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Tus Grupos */}
       <div className="card" style={{ padding: "0" }}>
@@ -317,11 +427,14 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
               }}
             >
               <option value="">Seleccionar nuevo administrador...</option>
-              {groupToTransfer?.members?.filter(m => m !== userId).map(memberId => (
-                <option key={memberId} value={memberId}>
-                  {groupToTransfer.usersMap?.[memberId] ? formatUserName(groupToTransfer.usersMap[memberId]) : `Usuario ${(memberId ? memberId.substring(0,6) : '')}...`}
-                </option>
-              ))}
+              {groupToTransfer?.members?.filter(m => m !== userId).map(memberId => {
+                const uMap = groupToTransfer?.usersMap || groups.find(g => g.id === groupToTransfer?.id)?.usersMap || activeGroup?.usersMap || {};
+                return (
+                  <option key={memberId} value={memberId}>
+                    {uMap[memberId] ? formatUserName(uMap[memberId]) : `Usuario ${(memberId ? memberId.substring(0,6) : '')}...`}
+                  </option>
+                );
+              })}
             </select>
           </div>
           
@@ -349,7 +462,8 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
                 className="btn-primary"
                 onClick={() => {
                   if (groupToTransfer) {
-                    const wallet = groupToTransfer.usersMap?.[selectedNewAdminId]?.walletAddress;
+                    const uMap = groupToTransfer?.usersMap || groups.find(g => g.id === groupToTransfer?.id)?.usersMap || activeGroup?.usersMap || {};
+                    const wallet = uMap[selectedNewAdminId]?.walletAddress;
                     if (!wallet) {
                       toast.error("El usuario seleccionado no tiene una wallet válida.");
                       return;
@@ -372,7 +486,8 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
                 className="btn-primary"
                 onClick={() => {
                   if (groupToTransfer) {
-                    const wallet = groupToTransfer.usersMap?.[selectedNewAdminId]?.walletAddress;
+                    const uMap = groupToTransfer?.usersMap || groups.find(g => g.id === groupToTransfer?.id)?.usersMap || activeGroup?.usersMap || {};
+                    const wallet = uMap[selectedNewAdminId]?.walletAddress;
                     if (!wallet) {
                       toast.error("El usuario seleccionado no tiene una wallet válida.");
                       return;

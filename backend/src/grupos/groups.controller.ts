@@ -45,10 +45,35 @@ export class GroupsController {
   async list(@Req() req: any) {
     const user = await this.currentUser(req);
     const groups = await this.groups.findAllForUser(user.id);
+    const allMemberIds = Array.from(new Set(groups.flatMap(g => g.members || [])));
+    const allUsers = await this.users.findMany(allMemberIds);
+    const globalUsersMap: Record<string, { name?: string; email?: string; walletAddress?: string }> = {};
+    for (const u of allUsers) {
+      globalUsersMap[u.id] = { name: u.name, email: u.email, walletAddress: u.walletAddress };
+      if (u.walletAddress) {
+        globalUsersMap[u.walletAddress.toLowerCase()] = { name: u.name, email: u.email, walletAddress: u.walletAddress };
+      }
+    }
+
     const result = [];
     for (const g of groups) {
       const deleteProposals = await this.groups.getDeleteProposalsForGroup(g.id);
-      result.push({ ...g, isCreator: g.creatorUserId === user.id, deleteProposals, currentUserId: user.id });
+      const groupUsersMap: Record<string, { name?: string; email?: string; walletAddress?: string }> = {};
+      for (const mId of (g.members || [])) {
+        if (globalUsersMap[mId]) {
+          groupUsersMap[mId] = globalUsersMap[mId];
+          if (globalUsersMap[mId].walletAddress) {
+            groupUsersMap[globalUsersMap[mId].walletAddress!.toLowerCase()] = globalUsersMap[mId];
+          }
+        }
+      }
+      result.push({ 
+        ...g, 
+        isCreator: g.creatorUserId === user.id, 
+        deleteProposals, 
+        usersMap: groupUsersMap,
+        currentUserId: user.id 
+      });
     }
     return result;
   }
@@ -92,10 +117,10 @@ export class GroupsController {
       }
     }
     const deleteProposals = await this.groups.getDeleteProposalsForGroup(group!.id);
-    return { ...group, creatorUserId: group!.creatorUserId, ...state, name: group!.name, deposits, usersMap, deleteProposals };
+    return { ...group, isCreator: group!.creatorUserId === user.id, creatorUserId: group!.creatorUserId, ...state, name: group!.name, deposits, usersMap, deleteProposals };
   }
 
-  /** Estado real del fondo, leído en vivo desde Monad: balance, limites y feed de movimientos. */
+  /** Estado real del fondo, leÃ­do en vivo desde Monad: balance, limites y feed de movimientos. */
   @Get(":id/state")
   async state(@Req() req: any, @Param("id") groupId: string) {
     const user = await this.currentUser(req);
@@ -137,7 +162,7 @@ export class GroupsController {
     return this.groups.create(body.name, user.id, user.walletAddress, body.creditLimit, body.dailyLimit);
   }
 
-  /** Paso 1 del flujo "unirme/gastar/votó?ar": el front pide el nonce actual para armar la firma. */
+  /** Paso 1 del flujo "unirme/gastar/votÃ³?ar": el front pide el nonce actual para armar la firma. */
   @Get(":id/nonce")
   async getNonce(@Req() req: any, @Param("id") groupId: string) {
     try {
@@ -146,7 +171,7 @@ export class GroupsController {
       const nonce = await this.relayer.getNonce(group!.contractAddress, user.walletAddress);
       return { nonce: nonce.toString() };
     } catch (err: any) {
-      throw new BadRequestException("Este grupo utiliza una versión antigua del contrato que no soporta esta función. Por favor, crea un nuevo grupo.");
+      throw new BadRequestException("Este grupo utiliza una versiÃ³n antigua del contrato que no soporta esta funciÃ³n. Por favor, crea un nuevo grupo.");
     }
   }
 
@@ -286,8 +311,10 @@ export class GroupsController {
     const group = await this.groups.findOne(groupId);
     const proposal = await this.groups.proposeDelete(groupId, user.id);
     
-    this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
+    this.notifications.emitAndSave(groupId, "system", { 
+      targetUserIds: group!.members, 
       type: "system",
+      groupId: groupId,
       message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'El creador')} propuso eliminar el grupo.`,
     });
     
@@ -298,7 +325,16 @@ export class GroupsController {
   @Delete(':id/propose-delete')
   async clearDeleteProposal(@Req() req: any, @Param('id') groupId: string) {
     const user = await this.currentUser(req);
+    const group = await this.groups.findOne(groupId);
     await this.groups.clearDeleteProposal(groupId, user.id);
+    if (group) {
+      this.notifications.emitAndSave(groupId, "system", { 
+        targetUserIds: group.members, 
+        type: "system",
+        groupId: groupId,
+        message: `CAMBIO EN EL GRUPO ${group.name}: ${formatName(user, 'El creador')} cancelo la propuesta de eliminacion.`,
+      });
+    }
     return { ok: true };
   }
 
@@ -308,8 +344,10 @@ export class GroupsController {
     const group = await this.groups.findOne(groupId);
     const proposal = await this.groups.voteDelete(body.proposalId, user.id, body.approve);
     
-    this.notifications.emitAndSave(groupId, "system", { targetUserIds: group!.members, 
+    this.notifications.emitAndSave(groupId, "system", { 
+      targetUserIds: group!.members, 
       type: "system",
+      groupId: groupId,
       message: `CAMBIO EN EL GRUPO ${group!.name}: ${formatName(user, 'Un miembro')} voto ${body.approve ? 'a favor' : 'en contra'} de eliminar el grupo.`,
     });
     

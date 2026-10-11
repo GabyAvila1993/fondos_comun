@@ -67,7 +67,8 @@ export default function UserDashboard() {
           icon: "🗳️",
           style: { borderRadius: '10px', background: 'var(--card-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' },
         });
-        if (data.groupId) fetchGroupDetails(data.groupId, 2000);
+        if (data.groupId) fetchGroupDetails(data.groupId, 1000);
+        loadBasicData();
       }
     };
 
@@ -91,8 +92,8 @@ export default function UserDashboard() {
           icon: "👋",
           style: { borderRadius: '10px', background: 'var(--card-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' },
         });
-        if (data.groupId) fetchGroupDetails(data.groupId, 2000);
-        else loadBasicData();
+        if (data.groupId) fetchGroupDetails(data.groupId, 1000);
+        loadBasicData();
       }
     };
 
@@ -197,7 +198,12 @@ export default function UserDashboard() {
       const tid = toast.loading("Cancelando propuesta de eliminación...");
       await api.clearDeleteProposal(token, groupId);
       toast.success("Propuesta cancelada con éxito.", { id: tid });
+      setGroups(prev => prev.map(g => g.id === groupId ? {
+        ...g,
+        deleteProposals: (g.deleteProposals || []).filter(p => p.status !== "rejected" && p.status !== "pending")
+      } : g));
       fetchGroupDetails(groupId);
+      loadBasicData();
     } catch (e: any) {
       toast.error(e.message || "Error al cancelar la propuesta");
     }
@@ -469,6 +475,7 @@ export default function UserDashboard() {
       setReadVotes(prev => [...prev, `del-${proposalId}`]);
         setActiveTab("inicio");
       fetchGroupDetails(targetGroup.id);
+      loadBasicData();
     } catch (err: any) {
       toast.error("Error al rechazar: " + err.message);
       toast.dismiss(tid);
@@ -484,9 +491,14 @@ export default function UserDashboard() {
 
       if (group.members && group.members.length > 1) {
         const tid = toast.loading("Proponiendo eliminación...");
-        await api.proposeDelete(token, groupId);
+        const proposal = await api.proposeDelete(token, groupId);
         toast.success("Propuesta de eliminación creada", { id: tid });
+        setGroups(prev => prev.map(g => g.id === groupId ? {
+          ...g,
+          deleteProposals: [...(g.deleteProposals || []).filter(p => p.id !== proposal?.id), proposal]
+        } : g));
         fetchGroupDetails(groupId);
+        loadBasicData();
       } else {
         const tid = toast.loading("Eliminando grupo...");
         await api.deleteGroup(token, groupId);
