@@ -255,15 +255,15 @@ export class RelayerService {
     return tx.wait();
   }
 
-  async transferAdminFor(groupAddress: string, currentAdmin: string, newAdminWallet: string, nonce: number, signature: string) {
+  async transferAdminFor(groupAddress: string, currentAdmin: string, newAdminWallet: string, nonce: number | bigint, signature: string) {
     const contract = this.groupContract(groupAddress);
-    const tx = await contract.transferAdminFor(currentAdmin, newAdminWallet, nonce, signature);
+    const tx = await contract.transferAdminFor(currentAdmin, newAdminWallet, BigInt(nonce), signature);
     return tx.wait();
   }
 
-  async changeAdminAndLeaveFor(groupAddress: string, currentAdmin: string, newAdminWallet: string, nonce: number, signature: string) {
+  async changeAdminAndLeaveFor(groupAddress: string, currentAdmin: string, newAdminWallet: string, nonce: number | bigint, signature: string) {
     const contract = this.groupContract(groupAddress);
-    const tx = await contract.changeAdminAndLeaveFor(currentAdmin, newAdminWallet, nonce, signature);
+    const tx = await contract.changeAdminAndLeaveFor(currentAdmin, newAdminWallet, BigInt(nonce), signature);
     return tx.wait();
   }
 }
