@@ -171,9 +171,6 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
                   <div className={`tx-amount ${item.type === "out" ? "negative" : "positive"}`} style={{ color: item.type === "in" ? "var(--primary)" : "inherit" }}>
                     {item.type === "out" ? "- " : "+ "}{fmt(item.amount)}
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textAlign: "right" }}>
-                    ≈ ${(item.amount / 1000).toFixed(2)} USDC
-                  </div>
                   <div className="tx-date" style={{ color: item.status === "Pendiente" ? "orange" : item.status === "Rechazado" ? "red" : "var(--text-muted)" }}>
                     {item.status}
                   </div>
@@ -255,9 +252,6 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
                     <div>
                       <div className={`tx-amount ${item.type === "out" ? "negative" : "positive"}`} style={{ color: item.type === "in" ? "var(--primary)" : "inherit" }}>
                         {item.type === "out" ? "- " : "+ "}{fmt(item.amount)}
-                      </div>
-                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textAlign: "right" }}>
-                        ≈ ${(item.amount / 1000).toFixed(2)} USDC
                       </div>
                       <div className="tx-date" style={{ color: item.status === "Pendiente" ? "orange" : item.status === "Rechazado" ? "red" : "var(--text-muted)" }}>
                         {item.status}

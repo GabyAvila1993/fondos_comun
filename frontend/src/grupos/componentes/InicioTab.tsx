@@ -122,15 +122,10 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
             {isLoadingDetails || activeGroup.deposits === undefined ? (
               <div className="loading-text-blink" style={{ color: "white", fontSize: "1.5rem", fontWeight: 600, padding: "10px 0" }}>Cargando saldo...</div>
             ) : (
-              <div>
-                <div className="balance-amount">{fmt(getFiatBalance(activeGroup)!)}</div>
-                <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)", marginTop: "2px", fontWeight: 500 }}>
-                  ≈ {activeGroup.balance ? Number(activeGroup.balance).toFixed(2) : "0.00"} USDC en Monad Testnet
-                </div>
-              </div>
+              <div className="balance-amount">{fmt(getFiatBalance(activeGroup)!)}</div>
             )}
             <div className="limit-info mt-2" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-              <span>Límite libre por persona: <span style={{ fontWeight: 600 }}>{fmt(Number(activeGroup.creditLimit) * fiatToMonRate)}</span></span>
+              <span>Límite libre por persona: <span style={{ fontWeight: 600 }}>{fmt(Math.round((Number(activeGroup.creditLimit) * fiatToMonRate) / 100) * 100)}</span></span>
               {activeGroup.isCreator && (
                 <button 
                   onClick={onProposeLimit}

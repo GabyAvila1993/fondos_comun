@@ -256,7 +256,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
     </div>
   );
   if (type === "spend" || type === "request_approval") {
-    const limit = group ? Math.round(monToFiat(Number(group.creditLimit))) : 0;
+    const limit = group ? Math.round(monToFiat(Number(group.creditLimit)) / 100) * 100 : 0;
     const availableBalance = Math.round(getFiatBalance(group));
     return (
       <SpendForm
@@ -292,11 +292,6 @@ function DepositForm({ onSubmit, error, loading }: { onSubmit: (a: number) => vo
             Ingresa el monto para generar un código de pago o abonar mediante transferencia.
           </p>
 
-          <div style={{ background: "rgba(102, 87, 246, 0.08)", border: "1px solid rgba(102, 87, 246, 0.2)", borderRadius: "12px", padding: "12px", marginBottom: "20px", fontSize: "0.85rem", color: "var(--text)" }}>
-            <div style={{ fontWeight: 600, color: "var(--primary)", marginBottom: "4px" }}>🪙 Fondos On-Chain en Monad Testnet</div>
-            Tus depósitos se convierten automáticamente a <strong>USDC</strong> y quedan resguardados de forma transparente en el Smart Contract del fondo.
-          </div>
-
           <div className="form-group">
             <label className="form-label">Monto a ingresar (ARS)</label>
             <input 
@@ -306,11 +301,6 @@ function DepositForm({ onSubmit, error, loading }: { onSubmit: (a: number) => vo
               value={amount} 
               onChange={e => setAmount(e.target.value)} 
             />
-            {numAmount > 0 && (
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "6px" }}>
-                ≈ ${(numAmount / 1000).toFixed(2)} USDC on-chain (Tasa estimada: $1.000 ARS/USDC)
-              </div>
-            )}
           </div>
           {error && <div className="error-msg">{error}</div>}
           <button 
@@ -394,17 +384,17 @@ function SpendForm({
       <div style={{ background: "var(--bg-2)", borderRadius: "12px", padding: "12px 16px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Fondo Disponible</div>
-          <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--primary)" }}>${fmt(availableBalance)}</div>
+          <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--primary)" }}>{fmt(availableBalance)}</div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Límite Libre</div>
-          <div style={{ fontSize: "1.1rem", fontWeight: 700 }}>${fmt(limit)}</div>
+          <div style={{ fontSize: "1.1rem", fontWeight: 700 }}>{fmt(limit)}</div>
         </div>
       </div>
 
       {forceApprovalMode && (
         <div style={{ background: "rgba(102, 87, 246, 0.08)", border: "1px solid rgba(102, 87, 246, 0.2)", borderRadius: "12px", padding: "12px", fontSize: "0.85rem", marginBottom: "16px" }}>
-          🗳️ <strong>Modo Aprobación de Gasto:</strong> Este pedido requerirá votación mayoritaria on-chain de los integrantes del grupo antes de ejecutarse.
+          🗳️ <strong>Modo Aprobación de Gasto:</strong> Este pedido requerirá votación mayoritaria de los integrantes del grupo antes de ejecutarse.
         </div>
       )}
 
@@ -417,11 +407,6 @@ function SpendForm({
           value={amount} 
           onChange={e => setAmount(e.target.value)} 
         />
-        {numAmount > 0 && (
-          <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "6px" }}>
-            ≈ ${(numAmount / 1000).toFixed(2)} USDC en Monad Testnet
-          </div>
-        )}
       </div>
 
       <div className="form-group">
@@ -431,13 +416,13 @@ function SpendForm({
 
       {exceedsBalance && numAmount > 0 && (
         <div style={{ background: "var(--danger-light)", color: "var(--danger)", padding: "12px", borderRadius: "12px", fontSize: "0.85rem", marginBottom: "20px", fontWeight: 500 }}>
-          ⚠️ Saldo insuficiente: El monto ingresado (${fmt(numAmount)}) supera el fondo disponible (${fmt(availableBalance)}).
+          ⚠️ Saldo insuficiente: El monto ingresado ({fmt(numAmount)}) supera el fondo disponible ({fmt(availableBalance)}).
         </div>
       )}
 
       {!exceedsBalance && exceedsLimit && numAmount > 0 && !forceApprovalMode && (
         <div style={{ background: "var(--warning-light, rgba(245, 158, 11, 0.1))", color: "var(--warning, #d97706)", padding: "12px", borderRadius: "12px", fontSize: "0.85rem", marginBottom: "20px" }}>
-          Al superar el límite libre de ${fmt(limit)}, este gasto pasará a <strong>Votación Mayoritaria</strong> del grupo.
+          Al superar el límite libre de {fmt(limit)}, este gasto pasará a <strong>Votación Mayoritaria</strong> del grupo.
         </div>
       )}
 
@@ -460,7 +445,7 @@ function SpendForm({
             ? "Saldo insuficiente en el fondo" 
             : (exceedsLimit 
                 ? "Pedir Aprobación de Gasto" 
-                : `Gastar directamente ($${fmt(numAmount)})`
+                : `Gastar directamente (${fmt(numAmount)})`
               )
         }
       </button>
