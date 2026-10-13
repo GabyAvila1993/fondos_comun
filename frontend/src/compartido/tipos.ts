@@ -4,6 +4,7 @@ export interface Group {
   editedName?: string;
   contractAddress: string;
   creditLimit: string;
+  creditLimitFiat?: number;
   dailyLimit: number;
   majorityNeeded?: number;
   balance?: string;

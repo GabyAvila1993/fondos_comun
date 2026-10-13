@@ -37,7 +37,7 @@ export const api = {
   markNotificationsRead: (token: string, ids: string[]) =>
     request("/notifications/read", token, { method: "POST", body: JSON.stringify({ ids }) }),
 
-  createGroup: (token: string, body: { name: string; creditLimit: string; dailyLimit: number }) =>
+  createGroup: (token: string, body: { name: string; creditLimit: string; creditLimitFiat?: number; dailyLimit: number }) =>
     request("/groups", token, { method: "POST", body: JSON.stringify(body) }),
 
   getNonce: (token: string, groupId: string): Promise<{ nonce: string }> =>

@@ -17,18 +17,23 @@ export class GroupsService {
     private notifications: NotificationsService,
   ) {}
 
-  async create(name: string, creatorUserId: string, creatorWallet: string, creditLimit: string, dailyLimit: number) {
+  async create(name: string, creatorUserId: string, creatorWallet: string, creditLimit: string, dailyLimit: number, creditLimitFiat?: number) {
     const contractAddress = await this.relayer.createGroup(name, creatorWallet, creditLimit, dailyLimit);
     const group = this.repo.create({ 
       name, 
       contractAddress, 
       creatorUserId, 
       creditLimit, 
+      creditLimitFiat: creditLimitFiat !== undefined ? creditLimitFiat : null,
       dailyLimit,
       members: [creatorUserId]
     });
     await this.repo.save(group);
     return group;
+  }
+
+  async updateCreditLimitFiat(groupId: string, creditLimitFiat: number) {
+    await this.repo.update({ id: groupId }, { creditLimitFiat });
   }
 
   async recordDeposit(userId: string, groupId: string, amount: number) {

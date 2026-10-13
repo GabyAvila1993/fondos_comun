@@ -25,6 +25,9 @@ export class Group {
   @Column("decimal")
   creditLimit: string;
 
+  @Column("decimal", { nullable: true })
+  creditLimitFiat?: number;
+
   @Column()
   dailyLimit: number;
 

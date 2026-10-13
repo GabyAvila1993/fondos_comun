@@ -69,6 +69,7 @@ export class GroupsController {
       }
       result.push({ 
         ...g, 
+        creditLimitFiat: g.creditLimitFiat ? Number(g.creditLimitFiat) : null,
         isCreator: g.creatorUserId === user.id, 
         deleteProposals, 
         usersMap: groupUsersMap,
@@ -117,7 +118,7 @@ export class GroupsController {
       }
     }
     const deleteProposals = await this.groups.getDeleteProposalsForGroup(group!.id);
-    return { ...group, isCreator: group!.creatorUserId === user.id, creatorUserId: group!.creatorUserId, ...state, name: group!.name, deposits, usersMap, deleteProposals };
+    return { ...group, isCreator: group!.creatorUserId === user.id, creatorUserId: group!.creatorUserId, ...state, creditLimitFiat: group!.creditLimitFiat ? Number(group!.creditLimitFiat) : null, name: group!.name, deposits, usersMap, deleteProposals };
   }
 
   /** Estado real del fondo, leído en vivo desde Monad: balance, limites y feed de movimientos. */
@@ -153,13 +154,13 @@ export class GroupsController {
       }
     }
 
-    return { id: group!.id, contractAddress: group!.contractAddress, creatorUserId: group!.creatorUserId, isCreator: group!.creatorUserId === user.id, members: group!.members, ...onchain, name: group!.name, deposits, deleteProposals, usersMap };
+    return { id: group!.id, contractAddress: group!.contractAddress, creatorUserId: group!.creatorUserId, isCreator: group!.creatorUserId === user.id, members: group!.members, ...onchain, creditLimitFiat: group!.creditLimitFiat ? Number(group!.creditLimitFiat) : null, name: group!.name, deposits, deleteProposals, usersMap };
   }
 
   @Post()
-  async createGroup(@Req() req: any, @Body() body: { name: string; creditLimit: string; dailyLimit: number }) {
+  async createGroup(@Req() req: any, @Body() body: { name: string; creditLimit: string; creditLimitFiat?: number; dailyLimit: number }) {
     const user = await this.currentUser(req);
-    return this.groups.create(body.name, user.id, user.walletAddress, body.creditLimit, body.dailyLimit);
+    return this.groups.create(body.name, user.id, user.walletAddress, body.creditLimit, body.dailyLimit, body.creditLimitFiat);
   }
 
   /** Paso 1 del flujo "unirme/gastar/votó?ar": el front pide el nonce actual para armar la firma. */

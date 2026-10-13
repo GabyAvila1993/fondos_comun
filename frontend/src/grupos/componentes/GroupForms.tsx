@@ -44,6 +44,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
       await api.createGroup(token, {
         name,
         creditLimit: String(fiatToMon(limitFiat)),
+        creditLimitFiat: limitFiat,
         dailyLimit: 100
       });
       const end = Date.now();
@@ -122,7 +123,10 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
       }
 
       const amountMon = String((amountFiat * rate).toFixed(6));
-      const forceApproval = forceApprovalOverride || amountFiat > (Number(group.creditLimit) / rate);
+      const effectiveLimitFiat = (group.creditLimitFiat !== undefined && group.creditLimitFiat !== null)
+        ? Number(group.creditLimitFiat)
+        : (Number(group.creditLimit) / rate);
+      const forceApproval = forceApprovalOverride || amountFiat > effectiveLimitFiat;
       const finalDesc = `${desc}|ARS:${amountFiat}`;
       
       const message = {
@@ -256,7 +260,11 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
     </div>
   );
   if (type === "spend" || type === "request_approval") {
-    const limit = group ? Math.round(monToFiat(Number(group.creditLimit)) / 100) * 100 : 0;
+    const limit = group
+      ? (group.creditLimitFiat !== undefined && group.creditLimitFiat !== null
+          ? Number(group.creditLimitFiat)
+          : Math.round(monToFiat(Number(group.creditLimit))))
+      : 0;
     const availableBalance = Math.round(getFiatBalance(group));
     return (
       <SpendForm

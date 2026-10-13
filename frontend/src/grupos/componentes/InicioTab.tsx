@@ -125,7 +125,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
               <div className="balance-amount">{fmt(getFiatBalance(activeGroup)!)}</div>
             )}
             <div className="limit-info mt-2" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-              <span>Límite libre por persona: <span style={{ fontWeight: 600 }}>{fmt(Math.round((Number(activeGroup.creditLimit) * fiatToMonRate) / 100) * 100)}</span></span>
+              <span>Límite libre por persona: <span style={{ fontWeight: 600 }}>{fmt(activeGroup.creditLimitFiat !== undefined && activeGroup.creditLimitFiat !== null ? Number(activeGroup.creditLimitFiat) : Number(activeGroup.creditLimit) * fiatToMonRate)}</span></span>
               {activeGroup.isCreator && (
                 <button 
                   onClick={onProposeLimit}
