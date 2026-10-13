@@ -212,14 +212,21 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
                 <div className="approval-amounts">
                   <div>
                     <div className="approval-amount-label">Monto Solicitado</div>
-                    <div className="approval-amount-value">{fmt(amount * 1000)}</div>
-                      {(() => { const match = (tx.desc || "").match(/(.*?)(?:\|ARS:(\d+(?:\.\d+)?))?$/); return match?.[2] ? <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "2px" }}>� {fmt(Number(match[2]))} ARS</div> : null; })()}
+                    <div className="approval-amount-value">
+                      ${(() => {
+                        const match = (tx.desc || "").match(/(.*?)(?:\|ARS:(\d+(?:\.\d+)?))?$/);
+                        return fmt(match?.[2] ? Number(match[2]) : amount * 1000);
+                      })()}
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                      ≈ ${amount.toFixed(2)} USDC en Monad Testnet
+                    </div>
                   </div>
                   {exceed && (
                     <div style={{ textAlign: "right" }}>
                       <div className="approval-amount-label">Excedente Libre</div>
                       <div className="approval-amount-exceed">
-                        {fmt((amount - tx.limit) * 1000)} <HandCoins weight="fill" size={16} />
+                        ${fmt((amount - tx.limit) * 1000)} <HandCoins weight="fill" size={16} />
                       </div>
                     </div>
                   )}
@@ -234,7 +241,9 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
                     <div className="progress-bar-fill" style={{ width: `${percent}%` }}></div>
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "8px" }}>
-                    {exceed ? "Al superar el límite libre, necesita votación mayoritaria para ser aprobado." : "Votación regular."}
+                    {exceed 
+                      ? "⚠️ Supera el límite libre por persona. Requiere aprobación de la mayoría del grupo para ejecutarse." 
+                      : "🗳️ Solicitud enviada a votación. El miembro solicitó la aprobación del grupo antes de realizar el desembolso."}
                   </div>
                 </div>
               </div>
