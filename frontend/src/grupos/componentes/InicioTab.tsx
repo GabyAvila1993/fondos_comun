@@ -21,11 +21,13 @@ interface InicioTabProps {
   onTransferAdmin: (groupId: string, newAdminId: string, newAdminWallet: string) => void;
   onCancelDeleteProposal?: (groupId: string) => void;
   isLoadingDetails?: boolean;
+  isInitialLoading?: boolean;
+  onRequestApproval?: () => void;
 }
 
 
-export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend, onProposeLimit, onDeleteGroup, onRenameGroup, onChangeAdminLeave,
-  onTransferAdmin, isLoadingDetails, onCancelDeleteProposal }: InicioTabProps) {
+export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup, onGroupClick, onNewGroup, onDeposit, onSpend, onRequestApproval, onProposeLimit, onDeleteGroup, onRenameGroup, onChangeAdminLeave,
+  onTransferAdmin, isLoadingDetails, isInitialLoading, onCancelDeleteProposal }: InicioTabProps) {
   const activeGroup = groups.find((g) => g.id === activeGroupId);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
@@ -109,13 +111,23 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
           </div>
         </div>
 
-        {activeGroup ? (
+        {isInitialLoading ? (
+          <div className="balance-section">
+            <div className="balance-label">Fondo disponible</div>
+            <div className="loading-text-blink" style={{ color: "white", fontSize: "1.5rem", fontWeight: 600, padding: "10px 0" }}>Cargando saldo...</div>
+          </div>
+        ) : activeGroup ? (
           <div className="balance-section">
             <div className="balance-label">Fondo disponible</div>
             {isLoadingDetails || activeGroup.deposits === undefined ? (
               <div className="loading-text-blink" style={{ color: "white", fontSize: "1.5rem", fontWeight: 600, padding: "10px 0" }}>Cargando saldo...</div>
             ) : (
-              <div className="balance-amount">{fmt(getFiatBalance(activeGroup)!)}</div>
+              <div>
+                <div className="balance-amount">{fmt(getFiatBalance(activeGroup)!)}</div>
+                <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.85)", marginTop: "2px", fontWeight: 500 }}>
+                  ≈ {activeGroup.balance ? Number(activeGroup.balance).toFixed(2) : "0.00"} USDC en Monad Testnet
+                </div>
+              </div>
             )}
             <div className="limit-info mt-2" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
               <span>Límite libre por persona: <span style={{ fontWeight: 600 }}>{fmt(Number(activeGroup.creditLimit) * fiatToMonRate)}</span></span>
@@ -149,7 +161,7 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
           <div className="action-icon icon-yellow"><Wallet weight="fill" /></div>
           <span>Retirar</span>
         </button>
-        <button className="action-btn" onClick={onSpend}>
+        <button className="action-btn" onClick={onRequestApproval || onSpend}>
           <div className="action-icon icon-purple"><FileText weight="fill" /></div>
           <span>Pedir monto mayor</span>
         </button>
@@ -321,11 +333,15 @@ export default function InicioTab({ groups, activeGroupId, userId, onSelectGroup
               </button>
             </div>
           ))}
-          {groups.length === 0 && (
+          {isInitialLoading ? (
+            <div className="text-center text-muted loading-text-blink" style={{ padding: "24px 0" }}>
+              Cargando tus grupos...
+            </div>
+          ) : groups.length === 0 ? (
             <div className="text-center text-muted" style={{ padding: "20px 0" }}>
               Aún no formas parte de ningún grupo.
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 

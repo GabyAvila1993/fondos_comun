@@ -5,11 +5,12 @@ import type { Group } from "../../compartido/tipos";
 import { api } from "../../compartido/lib/api";
 import toast from "react-hot-toast";
 import { signTyped, toWei } from "../../compartido/lib/eip712";
+import { fmt } from "../../compartido/lib/utils";
 
 // Helpers para montos (simulando conversin a USDC)
 
 interface GroupFormsProps {
-  type: "new_group" | "deposit" | "spend" | "join_group" | "propose_limit";
+  type: "new_group" | "deposit" | "spend" | "request_approval" | "join_group" | "propose_limit";
   group?: Group;
   onSuccess: () => void;
   onCancel: () => void;
@@ -82,7 +83,20 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
     }
   };
 
-  const handleSpend = async (amountFiat: number, desc: string) => {
+  const getFiatBalance = (g?: Group) => {
+    if (!g) return 0;
+    if (g.deposits === undefined && g.balance !== undefined) {
+      return Number(g.balance) * fiatToMonRate;
+    }
+    const totalDeposits = (g.deposits || []).reduce((acc: number, d: any) => acc + Number(d.amount), 0);
+    const totalExpenses = (g.transactions || []).filter((t: any) => t.executed).reduce((acc: number, t: any) => {
+      const match = (t.desc || "").match(/\|ARS:(\d+(?:\.\d+)?)$/);
+      return acc + (match ? Number(match[1]) : Number(t.amount) * fiatToMonRate);
+    }, 0);
+    return Math.max(0, totalDeposits - totalExpenses);
+  };
+
+  const handleSpend = async (amountFiat: number, desc: string, forceApprovalOverride = false) => {
     if (!group) return;
     try {
       setLoading(true);
@@ -108,7 +122,7 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
       }
 
       const amountMon = String((amountFiat * rate).toFixed(6));
-      const forceApproval = amountFiat > (Number(group.creditLimit) / rate);
+      const forceApproval = forceApprovalOverride || amountFiat > (Number(group.creditLimit) / rate);
       const finalDesc = `${desc}|ARS:${amountFiat}`;
       
       const message = {
@@ -241,9 +255,19 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
       </button>
     </div>
   );
-  if (type === "spend") {
-    const limit = group ? monToFiat(Number(group.creditLimit)) : 0;
-    return <SpendForm limit={limit} onSubmit={handleSpend} error={error} loading={loading} />;
+  if (type === "spend" || type === "request_approval") {
+    const limit = group ? Math.round(monToFiat(Number(group.creditLimit))) : 0;
+    const availableBalance = Math.round(getFiatBalance(group));
+    return (
+      <SpendForm
+        limit={limit}
+        availableBalance={availableBalance}
+        forceApprovalMode={type === "request_approval"}
+        onSubmit={(amt, desc) => handleSpend(amt, desc, type === "request_approval")}
+        error={error}
+        loading={loading}
+      />
+    );
   }
   if (type === "propose_limit") {
     return <ProposeLimitForm onSubmit={handleProposeLimit} error={error} loading={loading} />;
@@ -258,14 +282,21 @@ export default function GroupForms({ type, group, onSuccess, onCancel }: GroupFo
 function DepositForm({ onSubmit, error, loading }: { onSubmit: (a: number) => void; error: string; loading: boolean }) {
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState(1);
+  const numAmount = Number(amount);
 
   return (
     <div>
       {step === 1 ? (
         <>
-          <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>
+          <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>
             Ingresa el monto para generar un código de pago o abonar mediante transferencia.
           </p>
+
+          <div style={{ background: "rgba(102, 87, 246, 0.08)", border: "1px solid rgba(102, 87, 246, 0.2)", borderRadius: "12px", padding: "12px", marginBottom: "20px", fontSize: "0.85rem", color: "var(--text)" }}>
+            <div style={{ fontWeight: 600, color: "var(--primary)", marginBottom: "4px" }}>🪙 Fondos On-Chain en Monad Testnet</div>
+            Tus depósitos se convierten automáticamente a <strong>USDC</strong> y quedan resguardados de forma transparente en el Smart Contract del fondo.
+          </div>
+
           <div className="form-group">
             <label className="form-label">Monto a ingresar (ARS)</label>
             <input 
@@ -275,9 +306,19 @@ function DepositForm({ onSubmit, error, loading }: { onSubmit: (a: number) => vo
               value={amount} 
               onChange={e => setAmount(e.target.value)} 
             />
+            {numAmount > 0 && (
+              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "6px" }}>
+                ≈ ${(numAmount / 1000).toFixed(2)} USDC on-chain (Tasa estimada: $1.000 ARS/USDC)
+              </div>
+            )}
           </div>
           {error && <div className="error-msg">{error}</div>}
-          <button className="btn-primary" style={{ width: "100%", marginTop: "16px" }} onClick={() => setStep(2)}>
+          <button 
+            className="btn-primary" 
+            style={{ width: "100%", marginTop: "16px" }} 
+            onClick={() => setStep(2)}
+            disabled={!numAmount || numAmount <= 0}
+          >
             Generar código de pago
           </button>
         </>
@@ -326,39 +367,102 @@ function DepositForm({ onSubmit, error, loading }: { onSubmit: (a: number) => vo
   );
 }
 
-function SpendForm({ limit, onSubmit, error, loading }: { limit: number; onSubmit: (a: number, d: string) => void; error: string; loading: boolean }) {
+function SpendForm({ 
+  limit, 
+  availableBalance, 
+  forceApprovalMode = false, 
+  onSubmit, 
+  error, 
+  loading 
+}: { 
+  limit: number; 
+  availableBalance: number; 
+  forceApprovalMode?: boolean; 
+  onSubmit: (a: number, d: string) => void; 
+  error: string; 
+  loading: boolean 
+}) {
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
 
   const numAmount = Number(amount);
-  const exceeds = numAmount > limit;
+  const exceedsBalance = numAmount > availableBalance;
+  const exceedsLimit = numAmount > limit || forceApprovalMode;
 
   return (
     <div>
-      <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>
-        Límite de gasto directo: <strong>${limit.toLocaleString("es-AR")}</strong>
-      </p>
+      <div style={{ background: "var(--bg-2)", borderRadius: "12px", padding: "12px 16px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Fondo Disponible</div>
+          <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--primary)" }}>${fmt(availableBalance)}</div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Límite Libre</div>
+          <div style={{ fontSize: "1.1rem", fontWeight: 700 }}>${fmt(limit)}</div>
+        </div>
+      </div>
+
+      {forceApprovalMode && (
+        <div style={{ background: "rgba(102, 87, 246, 0.08)", border: "1px solid rgba(102, 87, 246, 0.2)", borderRadius: "12px", padding: "12px", fontSize: "0.85rem", marginBottom: "16px" }}>
+          🗳️ <strong>Modo Aprobación de Gasto:</strong> Este pedido requerirá votación mayoritaria on-chain de los integrantes del grupo antes de ejecutarse.
+        </div>
+      )}
 
       <div className="form-group">
         <label className="form-label">Monto (ARS)</label>
-        <input className="form-input" type="number" placeholder="$0" value={amount} onChange={e => setAmount(e.target.value)} />
+        <input 
+          className="form-input" 
+          type="number" 
+          placeholder="$0" 
+          value={amount} 
+          onChange={e => setAmount(e.target.value)} 
+        />
+        {numAmount > 0 && (
+          <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "6px" }}>
+            ≈ ${(numAmount / 1000).toFixed(2)} USDC en Monad Testnet
+          </div>
+        )}
       </div>
 
       <div className="form-group">
         <label className="form-label">Descripción</label>
-        <input className="form-input" type="text" placeholder="Ej: Pizza viernes" value={desc} onChange={e => setDesc(e.target.value)} />
+        <input className="form-input" type="text" placeholder="Ej: Pizza viernes / Reserva de cancha" value={desc} onChange={e => setDesc(e.target.value)} />
       </div>
 
-      {exceeds && amount !== "" && (
-        <div style={{ background: "var(--danger-light)", color: "var(--danger)", padding: "12px", borderRadius: "12px", fontSize: "0.85rem", marginBottom: "20px" }}>
-          Al superar el límite libre de ${Math.round(limit).toLocaleString("es-AR")}, este gasto pasará a <strong>Votación Mayoritaria</strong>.
+      {exceedsBalance && numAmount > 0 && (
+        <div style={{ background: "var(--danger-light)", color: "var(--danger)", padding: "12px", borderRadius: "12px", fontSize: "0.85rem", marginBottom: "20px", fontWeight: 500 }}>
+          ⚠️ Saldo insuficiente: El monto ingresado (${fmt(numAmount)}) supera el fondo disponible (${fmt(availableBalance)}).
+        </div>
+      )}
+
+      {!exceedsBalance && exceedsLimit && numAmount > 0 && !forceApprovalMode && (
+        <div style={{ background: "var(--warning-light, rgba(245, 158, 11, 0.1))", color: "var(--warning, #d97706)", padding: "12px", borderRadius: "12px", fontSize: "0.85rem", marginBottom: "20px" }}>
+          Al superar el límite libre de ${fmt(limit)}, este gasto pasará a <strong>Votación Mayoritaria</strong> del grupo.
         </div>
       )}
 
       {error && <div className="error-msg">{error}</div>}
       
-      <button className="btn-primary" style={{ width: "100%", marginTop: "16px" }} onClick={() => onSubmit(numAmount, desc)} disabled={loading}>
-        {loading ? "Procesando..." : (exceeds ? "Pedir Aprobación" : "Gastar directamente")}
+      <button 
+        className="btn-primary" 
+        style={{ 
+          width: "100%", 
+          marginTop: "16px",
+          opacity: exceedsBalance || !numAmount || numAmount <= 0 ? 0.6 : 1,
+          cursor: exceedsBalance || !numAmount || numAmount <= 0 ? "not-allowed" : "pointer"
+        }} 
+        onClick={() => onSubmit(numAmount, desc)} 
+        disabled={loading || exceedsBalance || !numAmount || numAmount <= 0 || !desc.trim()}
+      >
+        {loading 
+          ? "Procesando..." 
+          : exceedsBalance 
+            ? "Saldo insuficiente en el fondo" 
+            : (exceedsLimit 
+                ? "Pedir Aprobación de Gasto" 
+                : `Gastar directamente ($${fmt(numAmount)})`
+              )
+        }
       </button>
     </div>
   );

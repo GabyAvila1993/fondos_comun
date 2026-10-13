@@ -37,10 +37,11 @@ export default function UserDashboard() {
   });
 
   // UI State
-  const [sheetView, setSheetView] = useState<"new_group" | "deposit" | "spend" | "join_group" | "propose_limit" | null>(null);
+  const [sheetView, setSheetView] = useState<"new_group" | "deposit" | "spend" | "request_approval" | "join_group" | "propose_limit" | null>(null);
   const [joinGroupData, setJoinGroupData] = useState<Group | undefined>(undefined);
 
   const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(false);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (user) {
@@ -144,7 +145,7 @@ export default function UserDashboard() {
         const totalDeposited = statsData.stats.reduce((acc: any, curr: any) => acc + curr.amountDeposited, 0);
         setUserStats({
           totalDeposited: String(totalDeposited),
-          groupsCount: statsData.stats.length
+          groupsCount: basicGroups.length
         });
       } catch (e) {
         console.warn("Could not load user stats", e);
@@ -182,6 +183,8 @@ export default function UserDashboard() {
       }
     } catch (e) {
       console.error("Error loading data", e);
+    } finally {
+      setIsInitialLoading(false);
     }
   };
 
@@ -637,13 +640,15 @@ export default function UserDashboard() {
             onNewGroup={() => setSheetView("new_group")}
             onDeposit={() => setSheetView("deposit")}
             onSpend={() => setSheetView("spend")}
+            onRequestApproval={() => setSheetView("request_approval")}
             onProposeLimit={() => setSheetView("propose_limit")}
             onDeleteGroup={handleDeleteGroup}
             onRenameGroup={handleRenameGroup}
             onChangeAdminLeave={handleChangeAdminLeave}
             onTransferAdmin={handleTransferAdmin}
-              onCancelDeleteProposal={handleCancelDeleteProposal}
-                        isLoadingDetails={isLoadingDetails}
+            onCancelDeleteProposal={handleCancelDeleteProposal}
+            isLoadingDetails={isLoadingDetails}
+            isInitialLoading={isInitialLoading}
           />
         )}
         {activeTab === "movimientos" && (
@@ -715,7 +720,8 @@ export default function UserDashboard() {
         sheetView === "new_group" ? "Crear Nuevo Grupo" : 
         sheetView === "deposit" ? "Ingresar Dinero" : 
         sheetView === "join_group" ? "Unirse al Grupo" : 
-        sheetView === "propose_limit" ? "Proponer Nuevo Límite" : "Solicitar Gasto"
+        sheetView === "propose_limit" ? "Proponer Nuevo Límite" : 
+        sheetView === "request_approval" ? "Pedir Aprobación de Gasto" : "Retirar Dinero"
       }>
         <GroupForms 
           type={sheetView!} 

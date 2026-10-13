@@ -31,7 +31,7 @@ export default function MiCuentaTab({ userAddress, userEmail, stats, groups = []
 
   // Use real stats or fallback to 0
   const totalDeposited = stats?.totalDeposited ? Number(stats.totalDeposited) : 0;
-  const groupsCount = stats?.groupsCount || 0;
+  const groupsCount = groups.length > 0 ? groups.length : (stats?.groupsCount || 0);
 
   const pendingVotes = groups.flatMap(g => {
     const txs = (g.pending || []).map((p: any) => ({ id: `tx-${p.id}`, type: "gasto", title: p.desc || "Solicitud de gasto", group: g }));
@@ -76,10 +76,20 @@ export default function MiCuentaTab({ userAddress, userEmail, stats, groups = []
               />
             </div>
             <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "4px" }}>
-              {userAddress.substring(0, 6)}...{userAddress.substring(userAddress.length - 4)}
+              {userAddress ? (
+                <a
+                  href={`https://testnet.monadscan.com/address/${userAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--primary)", textDecoration: "none", fontWeight: 500 }}
+                  title="Ver wallet en Monadscan"
+                >
+                  {userAddress.substring(0, 6)}...{userAddress.substring(userAddress.length - 4)} ↗
+                </a>
+              ) : "Wallet"}
             </div>
             <div className="profile-badge">
-              <CheckCircle weight="fill" /> Miembro Verificado
+              <CheckCircle weight="fill" /> Miembro Verificado (Monad Testnet)
             </div>
           </div>
         </div>

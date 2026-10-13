@@ -36,6 +36,7 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
           id: `dep-${dep.id}`,
           groupId: g.id,
           groupName: getGroupName(g),
+          contractAddress: g.contractAddress,
           user: uName,
           avatar: uName.substring(0,2).toUpperCase(),
           desc: "Ingreso de dinero",
@@ -64,6 +65,7 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
           id: `tx-${tx.id}`,
           groupId: g.id,
           groupName: getGroupName(g),
+          contractAddress: g.contractAddress,
           user: uName,
           avatar: uName.substring(0,2).toUpperCase(),
           desc: cleanDesc || "Gasto general",
@@ -110,6 +112,23 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
           </div>
         </div>
         
+        <div style={{ background: "rgba(102, 87, 246, 0.08)", padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)", fontSize: "0.8rem" }}>
+          <span style={{ color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span>⚡️ Monad Testnet</span>
+          </span>
+          {group.contractAddress && (
+            <a 
+              href={`https://testnet.monadscan.com/address/${group.contractAddress}`} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
+            >
+              <span>Contrato: {group.contractAddress.slice(0, 6)}...{group.contractAddress.slice(-4)}</span>
+              <span>↗</span>
+            </a>
+          )}
+        </div>
+
         <div style={{ background: "var(--card-bg)", padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", gap: "8px", overflowX: "auto" }}>
           <button style={btnStyle(filter === "all")} onClick={() => setFilter("all")}>Todos</button>
           <button style={btnStyle(filter === "in")} onClick={() => setFilter("in")}>Ingresos</button>
@@ -126,10 +145,34 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
                 <div className="tx-details">
                   <div className="tx-user">{item.type === "in" ? item.user : `Miembro ${item.user}...`}</div>
                   <div className="tx-desc">{item.desc}</div>
+                  {item.contractAddress && (
+                    <a 
+                      href={`https://testnet.monadscan.com/address/${item.contractAddress}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontSize: "0.72rem",
+                        color: "var(--primary)",
+                        textDecoration: "none",
+                        marginTop: "4px",
+                        fontWeight: 500
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span>⛓️ Monadscan</span>
+                      <span style={{ fontSize: "0.68rem" }}>↗</span>
+                    </a>
+                  )}
                 </div>
                 <div>
                   <div className={`tx-amount ${item.type === "out" ? "negative" : "positive"}`} style={{ color: item.type === "in" ? "var(--primary)" : "inherit" }}>
                     {item.type === "out" ? "- " : "+ "}{fmt(item.amount)}
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textAlign: "right" }}>
+                    ≈ ${(item.amount / 1000).toFixed(2)} USDC
                   </div>
                   <div className="tx-date" style={{ color: item.status === "Pendiente" ? "orange" : item.status === "Rechazado" ? "red" : "var(--text-muted)" }}>
                     {item.status}
@@ -162,9 +205,22 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
           
           return (
             <div key={g.id} style={{ marginBottom: "30px" }}>
-              <h3 style={{ fontSize: "1.1rem", marginBottom: "12px", borderBottom: "1px solid var(--border)", paddingBottom: "8px" }}>
-                {getGroupName(g)}
-              </h3>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)", paddingBottom: "8px", marginBottom: "12px" }}>
+                <h3 style={{ fontSize: "1.1rem", margin: 0 }}>
+                  {getGroupName(g)}
+                </h3>
+                {g.contractAddress && (
+                  <a 
+                    href={`https://testnet.monadscan.com/address/${g.contractAddress}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: "0.75rem", color: "var(--primary)", textDecoration: "none", fontWeight: 500, display: "inline-flex", alignItems: "center", gap: "2px" }}
+                  >
+                    <span>⚡️ {g.contractAddress.slice(0, 6)}...{g.contractAddress.slice(-4)}</span>
+                    <span>↗</span>
+                  </a>
+                )}
+              </div>
               <div className="tx-list">
                 {m.map(item => (
                   <div className="tx-item" key={item.id} style={{ padding: "8px 0" }}>
@@ -174,10 +230,34 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
                     <div className="tx-details">
                       <div className="tx-user">{item.type === "in" ? item.user : `Miembro ${item.user}...`}</div>
                       <div className="tx-desc">{item.desc}</div>
+                      {item.contractAddress && (
+                        <a 
+                          href={`https://testnet.monadscan.com/address/${item.contractAddress}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            fontSize: "0.72rem",
+                            color: "var(--primary)",
+                            textDecoration: "none",
+                            marginTop: "4px",
+                            fontWeight: 500
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span>⛓️ Monadscan</span>
+                          <span style={{ fontSize: "0.68rem" }}>↗</span>
+                        </a>
+                      )}
                     </div>
                     <div>
                       <div className={`tx-amount ${item.type === "out" ? "negative" : "positive"}`} style={{ color: item.type === "in" ? "var(--primary)" : "inherit" }}>
                         {item.type === "out" ? "- " : "+ "}{fmt(item.amount)}
+                      </div>
+                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textAlign: "right" }}>
+                        ≈ ${(item.amount / 1000).toFixed(2)} USDC
                       </div>
                       <div className="tx-date" style={{ color: item.status === "Pendiente" ? "orange" : item.status === "Rechazado" ? "red" : "var(--text-muted)" }}>
                         {item.status}
