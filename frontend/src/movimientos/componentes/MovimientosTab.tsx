@@ -47,9 +47,10 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
       });
 
       // Calcular la fecha base para los gastos: el máximo entre Date.now() y el depósito más reciente.
-      // Esto soluciona la desincronización si la DB tiene el reloj más adelantado.
+      // Aseguramos que los retiros queden por encima de los depósitos previos y en orden cronológico inverso.
       const maxDepositTime = deposits.reduce((max, d) => Math.max(max, d.timestamp), 0);
-      const baseTime = Math.max(Date.now(), maxDepositTime);
+      const totalTxs = g.transactions?.length || 0;
+      const baseTime = Math.max(Date.now(), maxDepositTime) + (totalTxs + 1) * 60000;
 
       const expenses = (g.transactions || []).map((tx, idx) => {
         const u = usersMap[tx.proposer.toLowerCase()];
@@ -58,7 +59,7 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
 
         const match = tx.desc.match(/\|ARS:(\d+(?:\.\d+)?)$/);
         const fiatAmount = match ? Number(match[1]) : Number(tx.amount) * 1000;
-        const cleanDesc = tx.desc.replace(/\|ARS:\d+(?:\.\d+)?$/, "");
+        const cleanDesc = tx.desc.replace(/\|ARS:\d+(?:\.\d+)?$/, "").trim();
 
         return {
           type: "out" as const,
@@ -70,8 +71,9 @@ export default function MovimientosTab({ groups, initialGroupId }: MovimientosTa
           avatar: uName.substring(0,2).toUpperCase(),
           desc: cleanDesc || "Gasto general",
           amount: fiatAmount,
-          // Usamos baseTime para intercalar los gastos con los depósitos correctamente
-          timestamp: baseTime - ((g.transactions?.length || 0) - idx) * 60000,
+          // g.transactions ya viene revertido del relayer (idx 0 es el gasto más reciente on-chain).
+          // Le asignamos a idx 0 el timestamp más alto para que aparezca arriba de todo.
+          timestamp: baseTime - idx * 60000,
           status: tx.executed ? "Completado" : (tx.rejected ? "Rechazado" : "Pendiente")
         };
       });

@@ -46,8 +46,8 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
     const myWallet = (g.usersMap?.[userId]?.walletAddress || userAddress || "").toLowerCase();
 
     const pendingDel = (g.deleteProposals || []).filter(p => p.status === "pending" && !readVotes.includes(`del-${p.id}`) && p.creatorUserId !== userId).map(p => ({...p, groupId: g.id, groupName, deleteRequiredVotes}));
-    const pendingLim = (g.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`) && p.proposer?.toLowerCase() !== myWallet).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit, usersMap: g.usersMap}));
-    const pendingTx = (g.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`) && p.proposer?.toLowerCase() !== myWallet).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit, usersMap: g.usersMap}));
+    const pendingLim = (g.pendingLimitProposals || []).filter(p => !readVotes.includes(`lim-${p.id}`) && p.proposer?.toLowerCase() !== myWallet).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit, usersMap: g.usersMap, creditLimitFiat: g.creditLimitFiat}));
+    const pendingTx = (g.pending || []).filter(p => !readVotes.includes(`tx-${p.id}`) && p.proposer?.toLowerCase() !== myWallet).map(p => ({...p, groupId: g.id, groupName, requiredVotes, limit, usersMap: g.usersMap, creditLimitFiat: g.creditLimitFiat}));
 
     allPendingDeletes.push(...pendingDel);
     allPendingLimits.push(...pendingLim);
@@ -152,7 +152,7 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div className="approval-amount-label">Límite Actual</div>
-                    <div className="approval-amount-value">{fmt(tx.limit * rate)}</div>
+                    <div className="approval-amount-value">{fmt(tx.creditLimitFiat !== undefined && tx.creditLimitFiat !== null ? Number(tx.creditLimitFiat) : tx.limit * rate)}</div>
                   </div>
                 </div>
 
@@ -187,9 +187,17 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
 
         {allPendingTxs.map((tx, idx) => {
           const amount = Number(tx.amount);
-          const exceed = amount > tx.limit;
           const votesCount = tx.votesFor;
           const percent = Math.min((votesCount / tx.requiredVotes) * 100, 100);
+
+          const match = (tx.desc || "").match(/(.*?)(?:\|ARS:(\d+(?:\.\d+)?))?$/);
+          const requestedFiat = match?.[2] ? Number(match[2]) : Math.round(amount * rate);
+          const limitFiat = tx.creditLimitFiat !== undefined && tx.creditLimitFiat !== null
+            ? Number(tx.creditLimitFiat)
+            : Math.round(tx.limit * rate);
+          const isExceeded = requestedFiat > limitFiat;
+          const excessFiat = Math.max(0, requestedFiat - limitFiat);
+          const cleanTitle = match?.[1]?.trim() || "Solicitud de gasto";
 
           return (
             <div className="approval-card" key={idx}>
@@ -207,23 +215,20 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
               </div>
 
               <div className="approval-content">
-                <div className="approval-title">{(() => { const match = (tx.desc || "").match(/(.*?)(?:\|ARS:(\d+(?:\.\d+)?))?$/); return match?.[1] || tx.desc || "Solicitud de gasto"; })()}</div>
+                <div className="approval-title">{cleanTitle}</div>
                 
                 <div className="approval-amounts">
                   <div>
                     <div className="approval-amount-label">Monto Solicitado</div>
                     <div className="approval-amount-value">
-                      {(() => {
-                        const match = (tx.desc || "").match(/(.*?)(?:\|ARS:(\d+(?:\.\d+)?))?$/);
-                        return fmt(match?.[2] ? Number(match[2]) : amount * 1000);
-                      })()}
+                      {fmt(requestedFiat)}
                     </div>
                   </div>
-                  {exceed && (
+                  {isExceeded && excessFiat > 0 && (
                     <div style={{ textAlign: "right" }}>
                       <div className="approval-amount-label">Excedente Libre</div>
                       <div className="approval-amount-exceed">
-                        {fmt((amount - tx.limit) * 1000)} <HandCoins weight="fill" size={16} />
+                        {fmt(excessFiat)} <HandCoins weight="fill" size={16} />
                       </div>
                     </div>
                   )}
@@ -238,7 +243,7 @@ export default function AprobacionesTab({ groups, userAddress, userId, onApprove
                     <div className="progress-bar-fill" style={{ width: `${percent}%` }}></div>
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "8px" }}>
-                    {exceed 
+                    {isExceeded 
                       ? "⚠️ Supera el límite libre por persona. Requiere aprobación de la mayoría del grupo para ejecutarse." 
                       : "🗳️ Solicitud enviada a votación. El miembro solicitó la aprobación del grupo antes de realizar el desembolso."}
                   </div>
